@@ -1,0 +1,11 @@
+{
+  "name": "codehive-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CodeHive Collaborative Workspace",
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend start",
+    "dev": "npx -y concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+  }
+}

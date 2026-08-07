@@ -1,0 +1,14 @@
+# Root GitIgnore for CodeHive Repository
+
+# Environment secret files
+.env
+.env.*
+*.env
+
+# Dependencies
+node_modules/
+
+# OS and Editor files
+.DS_Store
+.vscode/
+.idea/
