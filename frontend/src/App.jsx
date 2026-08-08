@@ -62,6 +62,24 @@ const AppContent = () => {
       <main className="app-body">
         {currentUser ? <WorkspacePreview /> : <AuthContainer />}
       </main>
+
+      <style>{`
+        .app-main-layout {
+          height: 100vh;
+          width: 100vw;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          position: relative;
+        }
+        .app-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,50 +1,46 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { FileExplorer } from './FileExplorer';
+import { CodeEditor } from './CodeEditor';
+import { TerminalPanel } from './TerminalPanel';
 import {
   Code,
-  Users,
   LogOut,
-  Terminal as TerminalIcon,
   Play,
   Share2,
-  Cpu,
-  CheckCircle2,
-  Server,
   Zap,
-  Globe
+  Server,
+  X,
+  FolderTree,
+  User,
+  CheckCircle2
 } from 'lucide-react';
 
-export const WorkspacePreview = () => {
-  const { currentUser, logout, isDemoMode } = useAuth();
-  const [activeTab, setActiveTab] = useState('App.jsx');
-  const [apiResponse, setApiResponse] = useState(null);
-  const [loadingApi, setLoadingApi] = useState(false);
-
-  const codeSnippets = {
-    'App.jsx': `import React, { useState, useEffect } from 'react';
-import { CodeHiveRoom } from '@codehive/collaboration';
+const INITIAL_FILES = {
+  'App.jsx': `import React, { useState, useEffect } from 'react';
 
 // 🐝 Welcome to CodeHive Workspace Room: #hive-alpha
-export default function CollaborativeWorkspace() {
+export default function CodeHiveApp() {
   const [peers, setPeers] = useState(['Alex', 'Sarah', 'You']);
-  
-  useEffect(() => {
-    const room = CodeHiveRoom.join('hive-alpha');
-    room.on('cursorChange', (cursor) => {
-      console.log('Peer cursor moved:', cursor);
-    });
-  }, []);
+  const [status, setStatus] = useState('Syncing code changes live...');
+
+  const handleExecute = () => {
+    console.log('🐝 Executing CodeHive Live Application...');
+    return 'Hive engine active across 3 peers!';
+  };
 
   return (
-    <div className="hive-editor-container">
-      <h1>CodeHive Live Collaboration Active 🚀</h1>
+    <div className="hive-workspace">
+      <h1>CodeHive Live Collaboration Room 🚀</h1>
+      <p>{status}</p>
     </div>
   );
 }`,
-    'server.js': `import express from 'express';
+  'server.js': `import express from 'express';
 import { verifyFirebaseToken } from './authMiddleware.js';
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
   res.json({
@@ -53,7 +49,159 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
     workspace: 'Hive Alpha',
     latencyMs: 12
   });
-});`,
+});
+
+console.log(\`Server initialized on port \${PORT}\`);`,
+  'styles.css': `/* CodeHive Workspace Theme Variables */
+.hive-workspace {
+  background: rgba(15, 18, 26, 0.95);
+  color: #f8fafc;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}`,
+  'utils.js': `// Helper functions for CodeHive collaboration
+export const calculateLatency = (t1, t2) => Math.abs(t2 - t1);
+
+export const formatUserInitials = (name) => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase();
+};`
+};
+
+export const WorkspacePreview = () => {
+  const { currentUser, logout } = useAuth();
+  const [files, setFiles] = useState(INITIAL_FILES);
+  const [activeFile, setActiveFile] = useState('App.jsx');
+  const [openTabs, setOpenTabs] = useState(['App.jsx', 'server.js']);
+  const [dirtyFiles, setDirtyFiles] = useState(new Set());
+  const [logs, setLogs] = useState([
+    {
+      type: 'info',
+      message: 'CodeHive IDE Engine initialized successfully. Ready for live editing.',
+      timestamp: new Date().toLocaleTimeString()
+    }
+  ]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [cursorStats, setCursorStats] = useState({ line: 1, col: 1 });
+  const [sidebarTab, setSidebarTab] = useState('explorer'); // 'explorer' | 'profile' | 'api'
+  const [apiResponse, setApiResponse] = useState(null);
+  const [loadingApi, setLoadingApi] = useState(false);
+
+  // File Management
+  const handleSelectFile = (filename) => {
+    setActiveFile(filename);
+    if (!openTabs.includes(filename)) {
+      setOpenTabs([...openTabs, filename]);
+    }
+  };
+
+  const handleCloseTab = (filename, e) => {
+    e.stopPropagation();
+    const filtered = openTabs.filter(t => t !== filename);
+    setOpenTabs(filtered);
+    if (activeFile === filename && filtered.length > 0) {
+      setActiveFile(filtered[filtered.length - 1]);
+    }
+  };
+
+  const handleAddFile = (newFilename) => {
+    if (files[newFilename]) return;
+    setFiles({
+      ...files,
+      [newFilename]: `// New file: ${newFilename}\n\nconsole.log("Hello from ${newFilename}");`
+    });
+    setOpenTabs([...openTabs, newFilename]);
+    setActiveFile(newFilename);
+    setLogs(prev => [
+      ...prev,
+      {
+        type: 'info',
+        message: `Created new file: ${newFilename}`,
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ]);
+  };
+
+  const handleDeleteFile = (filename) => {
+    if (Object.keys(files).length <= 1) return;
+    const remaining = { ...files };
+    delete remaining[filename];
+    setFiles(remaining);
+    const filteredTabs = openTabs.filter(t => t !== filename);
+    setOpenTabs(filteredTabs);
+    if (activeFile === filename && filteredTabs.length > 0) {
+      setActiveFile(filteredTabs[0]);
+    }
+  };
+
+  const handleCodeChange = (newCode) => {
+    setFiles({
+      ...files,
+      [activeFile]: newCode
+    });
+    if (!dirtyFiles.has(activeFile)) {
+      setDirtyFiles(new Set(dirtyFiles).add(activeFile));
+    }
+  };
+
+  // Code Execution Runner
+  const handleRunCode = () => {
+    setIsRunning(true);
+    const startTime = performance.now();
+    const currentCode = files[activeFile];
+    const timestamp = new Date().toLocaleTimeString();
+
+    // Clear saved dirty state on run
+    const updatedDirty = new Set(dirtyFiles);
+    updatedDirty.delete(activeFile);
+    setDirtyFiles(updatedDirty);
+
+    setTimeout(() => {
+      try {
+        const capturedLogs = [];
+        // Safe evaluation / log capture simulation
+        const customConsole = {
+          log: (...args) => capturedLogs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
+          warn: (...args) => capturedLogs.push(`[WARN] ${args.join(' ')}`),
+          error: (...args) => capturedLogs.push(`[ERROR] ${args.join(' ')}`)
+        };
+
+        // If JS/JSX, try extracting console statements or evaluating simple expressions safely
+        if (activeFile.endsWith('.js') || activeFile.endsWith('.jsx')) {
+          const fn = new Function('console', currentCode);
+          fn(customConsole);
+        }
+
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(1);
+
+        const newEntries = [];
+        if (capturedLogs.length > 0) {
+          capturedLogs.forEach(msg => {
+            newEntries.push({ type: 'info', message: msg, timestamp });
+          });
+        }
+        newEntries.push({
+          type: 'success',
+          message: `Executed ${activeFile} successfully in ${duration}ms`,
+          timestamp
+        });
+
+        setLogs(prev => [...prev, ...newEntries]);
+      } catch (err) {
+        setLogs(prev => [
+          ...prev,
+          {
+            type: 'error',
+            message: `Runtime Error in ${activeFile}: ${err.message}`,
+            timestamp
+          }
+        ]);
+      } finally {
+        setIsRunning(false);
+      }
+    }, 250);
   };
 
   const handleTestBackendAPI = async () => {
@@ -81,13 +229,13 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
   };
 
   return (
-    <div className="workspace-wrapper">
-      {/* Workspace Top Navigation Bar */}
-      <div className="workspace-topbar glass-card">
-        <div className="topbar-left">
+    <div className="workspace-container">
+      {/* Top Bar Header */}
+      <div className="workspace-header glass-card">
+        <div className="header-left">
           <div className="room-badge">
             <span className="live-indicator"></span>
-            <span className="room-name">#hive-alpha-workspace</span>
+            <span className="room-name font-brand">#hive-alpha-workspace</span>
           </div>
 
           <div className="latency-badge">
@@ -96,8 +244,8 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
           </div>
         </div>
 
-        <div className="topbar-right">
-          {/* Active Collaborator Avatars */}
+        <div className="header-right">
+          {/* Active Collaborators */}
           <div className="collaborator-avatars">
             <div className="avatar-pill avatar-1" title="Alex (Active)">AM</div>
             <div className="avatar-pill avatar-2" title="Sarah (Active)">SK</div>
@@ -108,134 +256,208 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
                 (currentUser?.displayName || currentUser?.email || 'U')[0].toUpperCase()
               )}
             </div>
-            <span className="collaborator-count">+3 active</span>
+            <span className="collaborator-count">+3 live</span>
+          </div>
+
+          {/* Mode Switcher Tabs */}
+          <div className="sidebar-tabs">
+            <button
+              className={`sidebar-tab-btn ${sidebarTab === 'explorer' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('explorer')}
+              title="File Explorer"
+            >
+              <FolderTree size={15} />
+              <span>Files</span>
+            </button>
+            <button
+              className={`sidebar-tab-btn ${sidebarTab === 'profile' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('profile')}
+              title="User Account"
+            >
+              <User size={15} />
+              <span>Profile</span>
+            </button>
+            <button
+              className={`sidebar-tab-btn ${sidebarTab === 'api' ? 'active' : ''}`}
+              onClick={() => setSidebarTab('api')}
+              title="Express API Integration"
+            >
+              <Server size={15} />
+              <span>Backend API</span>
+            </button>
           </div>
 
           <button className="btn-vibrant share-btn">
-            <Share2 size={16} />
+            <Share2 size={15} />
             <span>Share Room</span>
           </button>
 
           <button className="btn-secondary logout-btn" onClick={logout}>
-            <LogOut size={16} />
+            <LogOut size={15} />
             <span>Sign Out</span>
           </button>
         </div>
       </div>
 
-      {/* Main Workspace Layout */}
-      <div className="workspace-main-grid">
-        {/* Left Code Editor Area */}
-        <div className="editor-container glass-card">
+      {/* Main IDE Body Layout */}
+      <div className="ide-layout-grid glass-card">
+        {/* Left Sidebar Section */}
+        <div className="ide-sidebar">
+          {sidebarTab === 'explorer' && (
+            <FileExplorer
+              files={files}
+              activeFile={activeFile}
+              onSelectFile={handleSelectFile}
+              onAddFile={handleAddFile}
+              onDeleteFile={handleDeleteFile}
+            />
+          )}
+
+          {sidebarTab === 'profile' && (
+            <div className="sidebar-profile-card">
+              <div className="user-profile-header">
+                <div className="user-avatar-lg">
+                  {currentUser?.photoURL ? (
+                    <img src={currentUser.photoURL} alt="User" />
+                  ) : (
+                    (currentUser?.displayName || currentUser?.email || 'U')[0].toUpperCase()
+                  )}
+                </div>
+                <div className="user-info">
+                  <h3 className="user-name">{currentUser?.displayName || 'CodeHive Engineer'}</h3>
+                  <p className="user-email">{currentUser?.email}</p>
+                  <div className="user-badge">
+                    {currentUser?.isDemo ? 'Demo Session User' : 'Authenticated via Firebase'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sidebarTab === 'api' && (
+            <div className="sidebar-api-card">
+              <div className="card-title-row">
+                <Server size={18} className="text-cyan" />
+                <h4>Express Backend API</h4>
+              </div>
+              <p className="card-desc">
+                Test Firebase ID token verification against Express API endpoint (`/api/auth/me`).
+              </p>
+              <button
+                className="btn-secondary test-api-btn"
+                onClick={handleTestBackendAPI}
+                disabled={loadingApi}
+              >
+                {loadingApi ? 'Calling API...' : 'Test Backend Endpoint'}
+              </button>
+              {apiResponse && (
+                <div className="api-response-box font-code">
+                  <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Center/Main Code Editor Window */}
+        <div className="ide-main-window">
           {/* File Tabs Header */}
           <div className="editor-tabs-bar">
-            <div className="tabs-left">
-              {Object.keys(codeSnippets).map((filename) => (
-                <button
+            <div className="tabs-scroll-area">
+              {openTabs.map((filename) => (
+                <div
                   key={filename}
-                  className={`file-tab ${activeTab === filename ? 'active' : ''}`}
-                  onClick={() => setActiveTab(filename)}
+                  className={`editor-tab ${activeFile === filename ? 'active' : ''}`}
+                  onClick={() => setActiveFile(filename)}
                 >
-                  <Code size={14} />
-                  <span>{filename}</span>
-                </button>
+                  <Code size={14} className="tab-icon text-indigo" />
+                  <span className="tab-filename font-code">{filename}</span>
+                  {dirtyFiles.has(filename) && <span className="dirty-dot">•</span>}
+                  {openTabs.length > 1 && (
+                    <button
+                      className="tab-close-btn"
+                      onClick={(e) => handleCloseTab(filename, e)}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
-            <div className="tabs-right">
-              <button className="btn-run">
+
+            <div className="tabs-actions">
+              <button
+                className="btn-run-code"
+                onClick={handleRunCode}
+                disabled={isRunning}
+              >
                 <Play size={13} />
-                <span>Run Code</span>
+                <span>{isRunning ? 'Running...' : 'Run Code'}</span>
               </button>
             </div>
           </div>
 
-          {/* Editor Body */}
-          <div className="editor-code-body font-code">
-            {/* Live Cursor Overlays */}
-            <div className="cursor-tag cursor-alex" style={{ top: '140px', left: '260px' }}>
-              <span className="cursor-pointer"></span>
-              <span className="cursor-label">Alex (typing...)</span>
+          {/* Interactive Code Editor */}
+          <CodeEditor
+            code={files[activeFile] || ''}
+            onChange={handleCodeChange}
+            onCursorChange={setCursorStats}
+            onRunCode={handleRunCode}
+            filename={activeFile}
+          />
+
+          {/* Console Output Drawer */}
+          <TerminalPanel
+            logs={logs}
+            onClearLogs={() => setLogs([])}
+            onRunCode={handleRunCode}
+            isRunning={isRunning}
+          />
+
+          {/* Status Bar */}
+          <div className="editor-status-bar font-code">
+            <div className="status-left">
+              <span>Ln {cursorStats.line}, Col {cursorStats.col}</span>
+              <span className="status-divider">|</span>
+              <span>Spaces: 2</span>
+              <span className="status-divider">|</span>
+              <span>UTF-8</span>
             </div>
 
-            <div className="cursor-tag cursor-sarah" style={{ top: '220px', left: '180px' }}>
-              <span className="cursor-pointer"></span>
-              <span className="cursor-label">Sarah (viewing)</span>
+            <div className="status-right">
+              <span className="status-lang">
+                {activeFile.endsWith('.jsx') ? 'JavaScript (JSX)' : activeFile.endsWith('.css') ? 'CSS3' : 'JavaScript'}
+              </span>
+              <span className="status-divider">|</span>
+              <span className="status-ready text-emerald">
+                <CheckCircle2 size={12} /> Ready
+              </span>
             </div>
-
-            <pre className="code-content">
-              <code>{codeSnippets[activeTab]}</code>
-            </pre>
-          </div>
-        </div>
-
-        {/* Right Sidebar Details */}
-        <div className="workspace-sidebar">
-          {/* Account Profile Card */}
-          <div className="sidebar-card glass-card">
-            <div className="user-profile-header">
-              <div className="user-avatar-lg">
-                {currentUser?.photoURL ? (
-                  <img src={currentUser.photoURL} alt="User" />
-                ) : (
-                  (currentUser?.displayName || currentUser?.email || 'U')[0].toUpperCase()
-                )}
-              </div>
-              <div className="user-info">
-                <h3 className="user-name">{currentUser?.displayName || 'CodeHive Engineer'}</h3>
-                <p className="user-email">{currentUser?.email}</p>
-                <div className="user-badge">
-                  {currentUser?.isDemo ? 'Demo Session User' : 'Authenticated via Firebase'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Backend API Verification Box */}
-          <div className="sidebar-card glass-card">
-            <div className="card-title-row">
-              <Server size={18} className="text-cyan" />
-              <h4>Express Backend Integration</h4>
-            </div>
-
-            <p className="card-desc">
-              Test token verification against the separated Express API server (`/api/auth/me`).
-            </p>
-
-            <button
-              className="btn-secondary test-api-btn"
-              onClick={handleTestBackendAPI}
-              disabled={loadingApi}
-            >
-              {loadingApi ? 'Calling API...' : 'Fetch Protected User Profile'}
-            </button>
-
-            {apiResponse && (
-              <div className="api-response-box font-code">
-                <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       <style>{`
-        .workspace-wrapper {
-          max-width: 1300px;
-          margin: 0 auto;
-          padding: 24px;
+        .workspace-container {
+          width: 100%;
+          height: calc(100vh - 67px);
+          padding: 12px 16px 16px 16px;
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 12px;
+          box-sizing: border-box;
+          overflow: hidden;
         }
-        .workspace-topbar {
-          padding: 16px 24px;
+        .workspace-header {
+          padding: 10px 20px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           flex-wrap: wrap;
-          gap: 16px;
+          gap: 12px;
+          border-radius: 16px;
         }
-        .topbar-left, .topbar-right {
+        .header-left, .header-right {
           display: flex;
           align-items: center;
           gap: 16px;
@@ -243,7 +465,7 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
         .room-badge {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           background: rgba(99, 102, 241, 0.15);
           border: 1px solid rgba(99, 102, 241, 0.3);
           padding: 6px 14px;
@@ -257,8 +479,8 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
           box-shadow: 0 0 10px #10b981;
         }
         .room-name {
-          font-weight: 600;
-          font-size: 0.9rem;
+          font-weight: 700;
+          font-size: 0.88rem;
           color: #ffffff;
         }
         .latency-badge {
@@ -271,16 +493,16 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
         .collaborator-avatars {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
         }
         .avatar-pill {
-          width: 34px;
-          height: 34px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.78rem;
+          font-size: 0.75rem;
           font-weight: 700;
           color: #ffffff;
           border: 2px solid var(--bg-primary);
@@ -290,137 +512,92 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
         .avatar-you { background: #6366f1; overflow: hidden; }
         .avatar-img { width: 100%; height: 100%; object-fit: cover; }
         .collaborator-count {
-          font-size: 0.78rem;
+          font-size: 0.75rem;
           color: var(--text-muted);
           margin-left: 4px;
         }
-        .share-btn { padding: 8px 16px; font-size: 0.85rem; }
-        .logout-btn { padding: 8px 16px; font-size: 0.85rem; }
-        .workspace-main-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 24px;
-        }
-        @media (min-width: 960px) {
-          .workspace-main-grid {
-            grid-template-columns: 1.6fr 0.9fr;
-          }
-        }
-        .editor-container {
+        .sidebar-tabs {
           display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          min-height: 480px;
+          background: rgba(15, 18, 26, 0.8);
+          border: 1px solid var(--border-subtle);
+          border-radius: 10px;
+          padding: 3px;
+          gap: 2px;
         }
-        .editor-tabs-bar {
-          background: rgba(15, 18, 26, 0.9);
-          border-bottom: 1px solid var(--border-subtle);
-          padding: 8px 16px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .tabs-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .file-tab {
+        .sidebar-tab-btn {
           background: transparent;
           border: none;
           color: var(--text-secondary);
           padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 0.84rem;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-        }
-        .file-tab.active {
-          background: rgba(99, 102, 241, 0.2);
-          color: #ffffff;
-          border: 1px solid rgba(99, 102, 241, 0.3);
-        }
-        .btn-run {
-          background: rgba(16, 185, 129, 0.2);
-          border: 1px solid rgba(16, 185, 129, 0.4);
-          color: #10b981;
-          padding: 6px 12px;
-          border-radius: 6px;
           font-size: 0.8rem;
           font-weight: 600;
+          border-radius: 8px;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
+          transition: all 0.2s ease;
         }
-        .editor-code-body {
-          position: relative;
-          padding: 20px;
-          flex: 1;
-          background: rgba(10, 12, 16, 0.95);
-          overflow-x: auto;
+        .sidebar-tab-btn:hover {
+          color: var(--text-primary);
         }
-        .code-content {
-          font-size: 0.88rem;
-          color: #e2e8f0;
-          line-height: 1.6;
-        }
-        .cursor-tag {
-          position: absolute;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          z-index: 5;
-          pointer-events: none;
-        }
-        .cursor-pointer {
-          width: 2px;
-          height: 18px;
-        }
-        .cursor-alex .cursor-pointer { background: #ec4899; }
-        .cursor-sarah .cursor-pointer { background: #a855f7; }
-        .cursor-label {
-          font-size: 0.68rem;
-          padding: 2px 6px;
-          border-radius: 4px;
+        .sidebar-tab-btn.active {
+          background: rgba(99, 102, 241, 0.25);
           color: #ffffff;
-          font-weight: 600;
+          border: 1px solid rgba(99, 102, 241, 0.4);
         }
-        .cursor-alex .cursor-label { background: #ec4899; }
-        .cursor-sarah .cursor-label { background: #a855f7; }
-        .workspace-sidebar {
+        .share-btn { padding: 8px 16px; font-size: 0.85rem; }
+        .logout-btn { padding: 8px 16px; font-size: 0.85rem; }
+
+        /* Main IDE Grid */
+        .ide-layout-grid {
+          display: grid;
+          grid-template-columns: 240px 1fr;
+          overflow: hidden;
+          flex: 1;
+          height: 100%;
+          border-radius: 16px;
+        }
+        @media (max-width: 860px) {
+          .ide-layout-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+        .ide-sidebar {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          height: 100%;
+          overflow: hidden;
         }
-        .sidebar-card {
-          padding: 24px;
+        .sidebar-profile-card, .sidebar-api-card {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
         .user-profile-header {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
         }
         .user-avatar-lg {
-          width: 54px;
-          height: 54px;
+          width: 48px;
+          height: 48px;
           border-radius: 50%;
           background: var(--gradient-brand);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.4rem;
+          font-size: 1.2rem;
           font-weight: 800;
           color: #ffffff;
           overflow: hidden;
         }
         .user-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
-        .user-name { font-size: 1.1rem; font-weight: 700; color: #ffffff; }
-        .user-email { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; }
+        .user-name { font-size: 1rem; font-weight: 700; color: #ffffff; }
+        .user-email { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; }
         .user-badge {
-          font-size: 0.72rem;
+          font-size: 0.7rem;
           color: var(--accent-cyan);
           background: rgba(6, 182, 212, 0.12);
           padding: 3px 8px;
@@ -430,23 +607,142 @@ app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
         .card-title-row {
           display: flex;
           align-items: center;
-          gap: 10px;
-          margin-bottom: 8px;
+          gap: 8px;
           color: #ffffff;
         }
-        .card-desc { font-size: 0.86rem; color: var(--text-secondary); margin-bottom: 16px; }
-        .test-api-btn { width: 100%; font-size: 0.88rem; padding: 10px; }
+        .card-desc { font-size: 0.82rem; color: var(--text-secondary); }
+        .test-api-btn { width: 100%; font-size: 0.85rem; padding: 8px; }
         .api-response-box {
-          margin-top: 14px;
-          padding: 12px;
-          background: rgba(10, 12, 16, 0.8);
+          padding: 10px;
+          background: rgba(10, 12, 16, 0.85);
           border: 1px solid var(--border-subtle);
           border-radius: 8px;
-          font-size: 0.78rem;
+          font-size: 0.75rem;
           color: var(--accent-emerald);
           max-height: 180px;
           overflow-y: auto;
         }
+
+        /* IDE Main Window */
+        .ide-main-window {
+          display: flex;
+          flex-direction: column;
+          background: rgba(10, 12, 16, 0.95);
+          overflow: hidden;
+          flex: 1;
+          height: 100%;
+        }
+        .editor-tabs-bar {
+          background: rgba(15, 18, 26, 0.95);
+          border-bottom: 1px solid var(--border-subtle);
+          padding: 0 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-height: 42px;
+        }
+        .tabs-scroll-area {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          overflow-x: auto;
+        }
+        .editor-tab {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 14px;
+          background: rgba(255, 255, 255, 0.02);
+          border-right: 1px solid rgba(255, 255, 255, 0.05);
+          color: var(--text-secondary);
+          font-size: 0.82rem;
+          cursor: pointer;
+          border-top: 2px solid transparent;
+          transition: background 0.15s, color 0.15s;
+        }
+        .editor-tab:hover {
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text-primary);
+        }
+        .editor-tab.active {
+          background: rgba(10, 12, 16, 0.95);
+          color: #ffffff;
+          border-top-color: var(--accent-indigo);
+          font-weight: 500;
+        }
+        .dirty-dot {
+          color: var(--accent-cyan);
+          font-size: 1.2rem;
+          line-height: 0;
+        }
+        .tab-close-btn {
+          background: transparent;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 2px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s, color 0.15s;
+        }
+        .tab-close-btn:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: #ffffff;
+        }
+        .tabs-actions {
+          display: flex;
+          align-items: center;
+        }
+        .btn-run-code {
+          background: rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.4);
+          color: #10b981;
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: background 0.2s, transform 0.1s;
+        }
+        .btn-run-code:hover:not(:disabled) {
+          background: rgba(16, 185, 129, 0.3);
+          transform: translateY(-1px);
+        }
+
+        /* Status Bar */
+        .editor-status-bar {
+          background: rgba(15, 18, 26, 0.95);
+          border-top: 1px solid var(--border-subtle);
+          padding: 4px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 0.74rem;
+          color: var(--text-muted);
+          user-select: none;
+        }
+        .status-left, .status-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .status-divider {
+          opacity: 0.3;
+        }
+        .status-ready {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: 600;
+        }
+        .text-cyan { color: var(--accent-cyan); }
+        .text-emerald { color: var(--accent-emerald); }
+        .text-indigo { color: var(--accent-indigo); }
       `}</style>
     </div>
   );

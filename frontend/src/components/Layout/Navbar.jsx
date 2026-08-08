@@ -51,12 +51,15 @@ export const Navbar = () => {
         .navbar-header {
           position: relative;
           z-index: 10;
-          padding: 20px 32px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 12px 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(10, 12, 16, 0.6);
+          backdrop-filter: blur(12px);
         }
         .navbar-container {
-          max-width: 1200px;
-          margin: 0 auto;
+          width: 100%;
+          max-width: 100%;
+          margin: 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
