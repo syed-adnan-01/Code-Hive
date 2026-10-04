@@ -98,7 +98,6 @@ export const Navbar = () => {
                   alt={displayName}
                   className="nav-avatar-img"
                   referrerPolicy="no-referrer"
-                  crossOrigin="anonymous"
                   onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; }}
                 />
               ) : null}
@@ -120,7 +119,6 @@ export const Navbar = () => {
                         alt={displayName}
                         className="nav-dropdown-avatar-img"
                         referrerPolicy="no-referrer"
-                        crossOrigin="anonymous"
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (

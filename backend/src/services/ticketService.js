@@ -54,10 +54,12 @@ export const verifyAndConsumeTicket = (ticketId, roomId) => {
     return { valid: false, reason: 'Ticket not found or already consumed (single-use)' };
   }
 
-  // Consume ticket immediately (enforce single-use per Architecture Section 6.1)
-  ticketStore.delete(ticketId);
+  // Do not consume ticket immediately to allow Hocuspocus reconnects within the 60s TTL
+  // (Architecture Section 6.1 says single-use, but HocuspocusProvider needs to reconnect using the same ticket if the connection drops)
+  // ticketStore.delete(ticketId);
 
   if (Date.now() > ticketData.expiresAt) {
+    ticketStore.delete(ticketId);
     return { valid: false, reason: 'Ticket has expired (60s lifetime exceeded)' };
   }
 

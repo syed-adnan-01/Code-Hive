@@ -150,16 +150,18 @@ export const setupHocuspocusCollab = ({
       }
     },
 
-    onAwarenessUpdate: ({ states }) => {
+    onAwarenessUpdate: () => {
       if (onPeersChange) {
+        const states = Array.from(provider.awareness.getStates().entries());
         const peers = states
-          .map((s) => {
-            if (!s.user) return null;
+          .map(([clientId, state]) => {
+            if (!state.user) return null;
             return {
-              ...s.user,
-              photoURL: s.user.photoURL || null,
-              uid: s.user.uid || null,
-              activeFile: s.activeFile || s.user.activeFile || 'main',
+              id: clientId,
+              ...state.user,
+              photoURL: state.user.photoURL || null,
+              uid: state.user.uid || null,
+              activeFile: state.activeFile || state.user.activeFile || 'main',
             };
           })
           .filter(Boolean);
