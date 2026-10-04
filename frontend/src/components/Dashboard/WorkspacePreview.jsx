@@ -19,6 +19,9 @@ import {
   getRoomAPI,
   getRoomTicketAPI,
   setupHocuspocusCollab,
+  getAuthTokenForRoom,
+  markTabRoomAsCreated,
+  isTabRoomCreator,
 } from '../../services/collabService';
 import {
   Code,
@@ -98,19 +101,17 @@ export const WorkspacePreview = () => {
   const [aiDebugResult, setAiDebugResult] = useState(null);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [enableAiSuggestions, setEnableAiSuggestions] = useState(true);
-  const [userToken, setUserToken] = useState(currentUser?.isDemo ? 'demo-bearer-token' : null);
+  const [userToken, setUserToken] = useState(null);
 
   useEffect(() => {
-    if (currentUser) {
-      if (currentUser.isDemo) {
-        setUserToken('demo-bearer-token');
-      } else if (typeof currentUser.getIdToken === 'function') {
-        currentUser.getIdToken().then(setUserToken).catch(() => {});
-      }
-    } else {
-      setUserToken(null);
-    }
-  }, [currentUser]);
+    let isMounted = true;
+    getAuthTokenForRoom(currentRoom?.id, currentUser).then((tok) => {
+      if (isMounted) setUserToken(tok);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [currentRoom, currentUser]);
 
   // Yjs Collaboration References
   const collabRef = useRef(null);
@@ -132,10 +133,7 @@ export const WorkspacePreview = () => {
     setActiveSidebarTab('history');
     setLoadingHistory(true);
     try {
-      let idToken = null;
-      if (currentUser) {
-        idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
-      }
+      const idToken = await getAuthTokenForRoom(currentRoom?.id, currentUser);
       const list = await fetchRunHistoryAPI(idToken);
       setHistoryList(list);
     } catch (err) {
@@ -143,7 +141,7 @@ export const WorkspacePreview = () => {
     } finally {
       setLoadingHistory(false);
     }
-  }, [currentUser]);
+  }, [currentRoom, currentUser]);
 
   // Helper to get tab icon for files
   const getTabFileIcon = (filename) => {
@@ -208,10 +206,7 @@ export const WorkspacePreview = () => {
     leaveRoom();
 
     try {
-      let idToken = null;
-      if (currentUser) {
-        idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
-      }
+      const idToken = await getAuthTokenForRoom(roomId, currentUser);
 
       // 1. Fetch Room metadata
       const room = await getRoomAPI(roomId, idToken);
@@ -329,10 +324,7 @@ export const WorkspacePreview = () => {
 
   // Handle Create Room
   const handleCreateRoom = async ({ name, language_id, linkAccess }) => {
-    let idToken = null;
-    if (currentUser) {
-      idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
-    }
+    const idToken = await getAuthTokenForRoom(null, currentUser);
 
     const room = await createRoomAPI({
       name,
@@ -341,6 +333,7 @@ export const WorkspacePreview = () => {
       idToken,
     });
 
+    markTabRoomAsCreated(room.id);
     await connectToRoom(room.id);
   };
 
@@ -370,8 +363,12 @@ export const WorkspacePreview = () => {
       if (collabRef.current) {
         setCollabYText(targetFile.ytext || collabRef.current.ytext);
         if (collabRef.current.provider) {
+          const isOwner = userRole === 'owner';
+          const roleLabel = isOwner ? 'Owner' : (userRole === 'viewer' ? 'Viewer' : 'Collaborator');
+          const baseName = currentUser?.displayName || currentUser?.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'Hive Developer');
           collabRef.current.provider.setAwarenessField('user', {
-            ...(currentUser ? { name: currentUser.displayName || currentUser.name, email: currentUser.email } : {}),
+            name: `${baseName} (${roleLabel})`,
+            email: currentUser?.email || '',
             role: userRole,
             activeFile: fileId,
           });
@@ -591,10 +588,7 @@ export const WorkspacePreview = () => {
     setIsRunning(true);
 
     try {
-      let idToken = null;
-      if (currentUser) {
-        idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
-      }
+      const idToken = await getAuthTokenForRoom(currentRoom?.id, currentUser);
 
       const activeFile = files[activeFileId] || Object.values(files)[0];
       const activeCode = collabYText ? collabYText.toString() : (activeFile?.text || code);
@@ -637,10 +631,7 @@ export const WorkspacePreview = () => {
     if (isAiAnalyzing) return;
     setIsAiAnalyzing(true);
     try {
-      let idToken = userToken;
-      if (!idToken && currentUser) {
-        idToken = currentUser.isDemo ? 'demo-bearer-token' : (await currentUser.getIdToken?.());
-      }
+      const idToken = await getAuthTokenForRoom(currentRoom?.id, currentUser);
       const activeFile = files[activeFileId] || Object.values(files)[0];
       const currentCode = collabYText ? collabYText.toString() : (activeFile?.text || code);
       const errorText = executionResult?.stderr || executionResult?.compile_output || (executionResult?.status?.description ? `Status: ${executionResult.status.description}` : 'Execution failed');
@@ -690,7 +681,7 @@ export const WorkspacePreview = () => {
     setApiResponse(null);
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const token = currentUser?.isDemo ? 'demo-bearer-token' : await currentUser?.getIdToken();
+      const token = await getAuthTokenForRoom(currentRoom?.id, currentUser);
 
       const res = await fetch(`${backendUrl}/api/auth/me`, {
         headers: {

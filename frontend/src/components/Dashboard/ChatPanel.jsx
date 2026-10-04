@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { fetchRoomMessages, postRoomMessage } from '../../services/chatService';
+import { getAuthTokenForRoom, getUidForRoom } from '../../services/collabService';
 
 export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
   const { currentUser } = useAuth();
@@ -25,11 +26,10 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
   const messagesEndRef = useRef(null);
   const pollTimerRef = useRef(null);
 
-  const currentUid = currentUser?.uid || 'demo-user-uid';
+  const currentUid = getUidForRoom(roomId, currentUser);
 
   const getIdToken = async () => {
-    if (!currentUser) return 'demo-user-token';
-    return currentUser.isDemo ? 'demo-user-token' : await currentUser.getIdToken();
+    return await getAuthTokenForRoom(roomId, currentUser);
   };
 
   // Scroll to bottom smoothly

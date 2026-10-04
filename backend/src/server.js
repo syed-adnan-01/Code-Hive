@@ -1,7 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import runRoutes from './routes/runRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
@@ -10,8 +10,6 @@ import aiRoutes from './routes/aiRoutes.js';
 import rtcRoutes from './routes/rtcRoutes.js';
 import { initCollabServer } from './services/collabService.js';
 import { initLanguagesFromFirestore } from './services/languageService.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

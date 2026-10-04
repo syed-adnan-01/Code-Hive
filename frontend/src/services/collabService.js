@@ -4,6 +4,59 @@ import * as Y from 'yjs';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const WS_URL = import.meta.env.VITE_WS_URL || BACKEND_URL.replace(/^http/, 'ws');
 
+// Session & Role resolution helpers for multi-tab collaboration
+export const getTabSessionId = () => {
+  let tabId = sessionStorage.getItem('codehive_tab_session_id');
+  if (!tabId) {
+    tabId = Math.random().toString(36).substring(2, 8);
+    sessionStorage.setItem('codehive_tab_session_id', tabId);
+  }
+  return tabId;
+};
+
+export const isTabRoomCreator = (roomId) => {
+  if (!roomId) return false;
+  return sessionStorage.getItem(`codehive_created_${roomId}`) === 'true';
+};
+
+export const markTabRoomAsCreated = (roomId) => {
+  if (!roomId) return;
+  sessionStorage.setItem(`codehive_created_${roomId}`, 'true');
+};
+
+export const getAuthTokenForRoom = async (roomId, currentUser) => {
+  // If real live Firebase user with getIdToken
+  if (currentUser && !currentUser.isDemo && typeof currentUser.getIdToken === 'function') {
+    return await currentUser.getIdToken();
+  }
+
+  // Demo mode session resolution:
+  const tabId = getTabSessionId();
+  if (!roomId) {
+    // When creating a new room
+    return `demo-owner_${tabId}-token`;
+  }
+
+  if (isTabRoomCreator(roomId)) {
+    // This tab created the room: send owner token
+    return `demo-owner_${tabId}-token`;
+  }
+
+  // This tab joined a shared room: send unique collaborator token
+  return `demo-collab_${tabId}-token`;
+};
+
+export const getUidForRoom = (roomId, currentUser) => {
+  if (currentUser && !currentUser.isDemo && currentUser.uid) {
+    return currentUser.uid;
+  }
+  const tabId = getTabSessionId();
+  if (!roomId || isTabRoomCreator(roomId)) {
+    return `demo-owner_${tabId}-uid`;
+  }
+  return `demo-collab_${tabId}-uid`;
+};
+
 // 1. Create a new collaboration room
 export const createRoomAPI = async ({ name, language_id, linkAccess, idToken }) => {
   const headers = { 'Content-Type': 'application/json' };
@@ -115,8 +168,16 @@ export const setupHocuspocusCollab = ({
 
   // Set user awareness presence (name, color, role)
   const peerColor = getRandomColor();
+  const tabId = getTabSessionId();
+  const isOwner = role === 'owner';
+  const roleLabel = isOwner ? 'Owner' : (role === 'viewer' ? 'Viewer' : 'Collaborator');
+  const baseName = user?.displayName || user?.name || (user?.email ? user.email.split('@')[0] : null);
+  const defaultDisplayName = baseName
+    ? `${baseName} (${roleLabel})`
+    : (isOwner ? 'Room Owner' : `Collaborator ${tabId.slice(0, 4).toUpperCase()}`);
+
   provider.setAwarenessField('user', {
-    name: user?.displayName || user?.name || 'Hive Collaborator',
+    name: defaultDisplayName,
     email: user?.email || '',
     color: peerColor,
     role: role || 'editor',
