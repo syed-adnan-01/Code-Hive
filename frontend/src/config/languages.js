@@ -233,10 +233,43 @@ fn main() {
   }
 ];
 
+export const EXTENSION_TO_LANGUAGE = {
+  js: 63,
+  jsx: 63,
+  mjs: 63,
+  cjs: 63,
+  py: 71,
+  cpp: 54,
+  cc: 54,
+  cxx: 54,
+  hpp: 54,
+  h: 54,
+  java: 62,
+  ts: 74,
+  tsx: 74,
+  go: 60,
+  rs: 73,
+};
+
 export const getLanguageById = (id) => {
   return SUPPORTED_LANGUAGES.find((lang) => lang.id === Number(id)) || SUPPORTED_LANGUAGES[0];
 };
 
 export const getLanguageByKey = (key) => {
   return SUPPORTED_LANGUAGES.find((lang) => lang.key === key.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+};
+
+export const getLanguageByExtension = (ext) => {
+  if (!ext) return null;
+  const cleanExt = ext.replace(/^\./, '').toLowerCase();
+  const langId = EXTENSION_TO_LANGUAGE[cleanExt];
+  return langId ? getLanguageById(langId) : null;
+};
+
+export const getLanguageByFilename = (filename) => {
+  if (!filename || typeof filename !== 'string') return null;
+  const parts = filename.split('.');
+  if (parts.length < 2) return null;
+  const ext = parts.pop();
+  return getLanguageByExtension(ext);
 };

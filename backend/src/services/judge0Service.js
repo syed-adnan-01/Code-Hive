@@ -62,6 +62,12 @@ const runSimulatedCode = async ({ source_code, language_id, stdin }) => {
           content = content.replace(/\{name\}/g, 'Developer').replace(/\{numbers\}/g, '[2, 4, 6, 8, 10]');
         } else if ((content.startsWith('"') && content.endsWith('"')) || (content.startsWith("'") && content.endsWith("'"))) {
           content = content.slice(1, -1);
+        } else if (/^[\d\s+\-*/%()]+$/.test(content)) {
+          try {
+            content = String(Function(`"use strict"; return (${content});`)());
+          } catch (e) {
+            // keep content as is
+          }
         }
         lines.push(content);
       }

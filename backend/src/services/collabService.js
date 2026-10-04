@@ -3,7 +3,7 @@ import crossws from 'crossws/adapters/node';
 import * as Y from 'yjs';
 import { verifyAndConsumeTicket } from './ticketService.js';
 import { getRoom, updateRoomSnapshot } from './roomService.js';
-import { getLanguageById } from '../config/languages.js';
+import { getLanguageById, getLanguageByFilename } from '../config/languages.js';
 
 let hocuspocusInstance = null;
 let crosswsAdapter = null;
@@ -49,22 +49,45 @@ export const initCollabServer = (httpServer) => {
         try {
           const binaryUpdate = Buffer.from(room.state, 'base64');
           Y.applyUpdate(document, binaryUpdate);
-          return;
         } catch (e) {
           console.warn(`Error applying snapshot for room ${documentName}:`, e.message);
         }
       }
 
-      // If document is empty, initialize default code template
+      const filesMap = document.getMap('files');
       const ytext = document.getText('code');
-      if (ytext.length === 0) {
-        const langConfig = getLanguageById(room?.language_id || 63);
-        ytext.insert(0, langConfig.defaultCode);
+      const langConfig = getLanguageById(room?.language_id || 63);
+      const defaultExt = langConfig?.extension || 'js';
+      const mainFileName = `main.${defaultExt}`;
+
+      // One-time migration: Initialize files Y.Map if empty (IDE Extension Plan Section 2 & 3)
+      if (filesMap.size === 0) {
+        const initialContent = ytext.length > 0 ? ytext.toString() : (langConfig?.defaultCode || '// Welcome to CodeHive 🐝\n');
+
+        // Maintain legacy ytext for backwards compatibility with tests
+        if (ytext.length === 0) {
+          ytext.insert(0, initialContent);
+        }
+
+        const mainFile = new Y.Map();
+        mainFile.set('id', 'main');
+        mainFile.set('name', mainFileName);
+
+        const mainText = new Y.Text();
+        mainText.insert(0, initialContent);
+        mainFile.set('text', mainText);
+        mainFile.set('createdAt', Date.now());
+        mainFile.set('updatedAt', Date.now());
+
+        filesMap.set('main', mainFile);
 
         const ymeta = document.getMap('meta');
-        ymeta.set('language_id', langConfig.id);
-        ymeta.set('language', langConfig.key);
-        ymeta.set('stdin', '');
+        if (!ymeta.has('language_id')) {
+          ymeta.set('language_id', langConfig.id);
+          ymeta.set('language', langConfig.key);
+          ymeta.set('stdin', '');
+          ymeta.set('activeFileId', 'main');
+        }
       }
     },
 
@@ -132,19 +155,61 @@ export const initCollabServer = (httpServer) => {
   return hocuspocusInstance;
 };
 
-// Read code directly from server's in-memory room document per Architecture Section 6.2
-export const getLiveRoomCode = async (roomId) => {
+// Read code directly from server's in-memory room document per Architecture Section 6.2 & Extension Plan Section 3
+export const getLiveRoomCode = async (roomId, fileId = null) => {
   if (!hocuspocusInstance) return null;
   try {
     const directConn = await hocuspocusInstance.openDirectConnection(roomId);
-    const code = directConn.document.getText('code').toString();
-    const meta = directConn.document.getMap('meta');
-    const language_id = meta.get('language_id');
+    const doc = directConn.document;
+    const filesMap = doc.getMap('files');
+    const meta = doc.getMap('meta');
+
+    let targetFilename = '';
+    let targetText = '';
+    let targetLangId = meta.get('language_id');
+
+    // 1. If fileId provided, find it in filesMap
+    if (fileId && filesMap.has(fileId)) {
+      const fileEntry = filesMap.get(fileId);
+      targetFilename = fileEntry.get('name') || '';
+      targetText = fileEntry.get('text')?.toString() || '';
+    } else if (filesMap.size > 0) {
+      // If no fileId, try activeFileId from meta or fallback to first file / 'main'
+      const activeId = meta.get('activeFileId') || 'main';
+      let fileEntry = filesMap.get(activeId);
+      if (!fileEntry) {
+        const firstKey = Array.from(filesMap.keys())[0];
+        fileEntry = filesMap.get(firstKey);
+      }
+      if (fileEntry) {
+        targetFilename = fileEntry.get('name') || '';
+        targetText = fileEntry.get('text')?.toString() || '';
+      }
+    }
+
+    // Fallback to legacy Y.Text('code') if empty or if legacy test updated 'code' directly
+    const legacyCode = doc.getText('code').toString();
+    let finalCode = targetText;
+    if (!finalCode && legacyCode) {
+      finalCode = legacyCode;
+    } else if (legacyCode && legacyCode !== targetText && (!fileId || fileId === 'main')) {
+      finalCode = legacyCode;
+    }
+
+    // Auto-resolve language from filename extension (IDE Extension Plan Section 3)
+    if (targetFilename) {
+      const extLang = getLanguageByFilename(targetFilename);
+      if (extLang) {
+        targetLangId = extLang.id;
+      }
+    }
+
     const stdin = meta.get('stdin');
 
     return {
-      code,
-      language_id,
+      code: finalCode,
+      filename: targetFilename,
+      language_id: targetLangId,
       stdin,
     };
   } catch (err) {

@@ -99,7 +99,15 @@ export const setupHocuspocusCollab = ({
 
     onAwarenessUpdate: ({ states }) => {
       if (onPeersChange) {
-        const peers = states.map((s) => s.user).filter(Boolean);
+        const peers = states
+          .map((s) => {
+            if (!s.user) return null;
+            return {
+              ...s.user,
+              activeFile: s.activeFile || s.user.activeFile || 'main',
+            };
+          })
+          .filter(Boolean);
         onPeersChange(peers);
       }
     },
@@ -116,12 +124,14 @@ export const setupHocuspocusCollab = ({
 
   const ytext = ydoc.getText('code');
   const ymeta = ydoc.getMap('meta');
+  const filesMap = ydoc.getMap('files');
 
   return {
     ydoc,
     provider,
     ytext,
     ymeta,
+    filesMap,
     destroy: () => {
       provider.destroy();
       ydoc.destroy();

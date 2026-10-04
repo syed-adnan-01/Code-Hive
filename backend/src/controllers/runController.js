@@ -9,10 +9,11 @@ const MAX_STDIN_BYTES = 10 * 1024; // 10 KB stdin cap
 
 export const runCode = async (req, res) => {
   try {
-    let { source_code, language_id, stdin, roomId } = req.body;
+    let { source_code, language_id, stdin, roomId, fileId } = req.body;
     const uid = req.user?.uid || 'demo-user';
 
-    // If roomId is provided, check role and read live code (Architecture Section 6.2 & 7)
+    // If roomId is provided, check role and read live code (Architecture Section 6.2 & Extension Plan Section 3)
+    let executionFilename = null;
     if (roomId) {
       const userRole = await resolveUserRole(roomId, uid);
       if (userRole === 'viewer') {
@@ -22,9 +23,10 @@ export const runCode = async (req, res) => {
         });
       }
 
-      const roomLive = await getLiveRoomCode(roomId);
+      const roomLive = await getLiveRoomCode(roomId, fileId);
       if (roomLive && roomLive.code) {
         source_code = roomLive.code;
+        executionFilename = roomLive.filename;
         if (!language_id && roomLive.language_id) {
           language_id = roomLive.language_id;
         }
@@ -83,6 +85,8 @@ export const runCode = async (req, res) => {
     const fullSubmission = {
       language: languageConfig.name,
       language_id: languageConfig.id,
+      filename: executionFilename,
+      fileId: fileId || null,
       ...submissionResult,
     };
 
@@ -109,6 +113,12 @@ export const runCode = async (req, res) => {
     return res.status(200).json({
       success: true,
       submission: fullSubmission,
+      file: executionFilename ? {
+        name: executionFilename,
+        fileId: fileId || null,
+        language: languageConfig.name,
+        language_id: languageConfig.id,
+      } : null,
     });
   } catch (error) {
     console.error('Run Controller Error:', error);

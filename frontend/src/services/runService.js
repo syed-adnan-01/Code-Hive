@@ -2,7 +2,7 @@
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-export const runCodeAPI = async ({ source_code, language_id, stdin = '', roomId, idToken }) => {
+export const runCodeAPI = async ({ source_code, language_id, stdin = '', roomId, fileId, idToken }) => {
   if (!source_code || !source_code.trim()) {
     throw new Error('Cannot execute empty source code.');
   }
@@ -23,6 +23,7 @@ export const runCodeAPI = async ({ source_code, language_id, stdin = '', roomId,
       language_id: Number(language_id),
       stdin: stdin || '',
       roomId: roomId || undefined,
+      fileId: fileId || undefined,
     }),
   });
 

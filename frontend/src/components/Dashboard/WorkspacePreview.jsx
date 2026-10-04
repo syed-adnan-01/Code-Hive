@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import * as Y from 'yjs';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { CodeEditor } from './CodeEditor';
 import { TerminalPanel } from './TerminalPanel';
 import { StdinPanel } from './StdinPanel';
 import { RoomModal } from './RoomModal';
-import { SUPPORTED_LANGUAGES, getLanguageById } from '../../config/languages';
+import { FileExplorer } from './FileExplorer';
+import { SUPPORTED_LANGUAGES, getLanguageById, getLanguageByFilename } from '../../config/languages';
 import { runCodeAPI, fetchRunHistoryAPI } from '../../services/runService';
 import {
   createRoomAPI,
@@ -34,12 +36,29 @@ import {
   Lock,
   Globe,
   History,
-  Clock
+  Clock,
+  Folder,
+  FolderOpen,
+  Plus,
+  X,
+  FileText,
+  Code2,
+  FileJson,
 } from 'lucide-react';
 
 export const WorkspacePreview = () => {
   const { currentUser, isDemoMode } = useAuth();
   const { isDark } = useTheme();
+
+  // Multi-file Workspace state (IDE Extension Plan Section 3)
+  const [files, setFiles] = useState({
+    main: {
+      id: 'main',
+      name: `main.${SUPPORTED_LANGUAGES[0].extension || 'js'}`,
+      text: SUPPORTED_LANGUAGES[0].defaultCode,
+    },
+  });
+  const [activeFileId, setActiveFileId] = useState('main');
 
   // Active language and code state (Solo mode defaults)
   const [selectedLanguage, setSelectedLanguage] = useState(SUPPORTED_LANGUAGES[0]);
@@ -70,8 +89,8 @@ export const WorkspacePreview = () => {
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Sidebar / Drawer states
-  const [activeSidebarTab, setActiveSidebarTab] = useState('');
+  // Sidebar / Drawer states (Defaults to 'files' for instant explorer access)
+  const [activeSidebarTab, setActiveSidebarTab] = useState('files');
   const [apiResponse, setApiResponse] = useState(null);
   const [loadingApi, setLoadingApi] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
@@ -94,6 +113,34 @@ export const WorkspacePreview = () => {
     }
   }, [currentUser]);
 
+  // Helper to get tab icon for files
+  const getTabFileIcon = (filename) => {
+    if (!filename) return <FileText size={14} className="tab-icon text-cyan" />;
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.jsx') || lower.endsWith('.tsx') || lower.endsWith('.js') || lower.endsWith('.ts')) {
+      return <FileCode size={14} className="tab-icon text-indigo" />;
+    }
+    if (lower.endsWith('.py')) {
+      return <FileCode size={14} className="tab-icon text-amber" />;
+    }
+    if (lower.endsWith('.cpp') || lower.endsWith('.cc') || lower.endsWith('.c') || lower.endsWith('.h')) {
+      return <Code2 size={14} className="tab-icon text-blue" />;
+    }
+    if (lower.endsWith('.java')) {
+      return <FileCode size={14} className="tab-icon text-red" />;
+    }
+    if (lower.endsWith('.go') || lower.endsWith('.rs')) {
+      return <Code2 size={14} className="tab-icon text-emerald" />;
+    }
+    if (lower.endsWith('.css') || lower.endsWith('.scss')) {
+      return <Code2 size={14} className="tab-icon text-pink" />;
+    }
+    if (lower.endsWith('.json')) {
+      return <FileJson size={14} className="tab-icon text-amber" />;
+    }
+    return <FileText size={14} className="tab-icon text-cyan" />;
+  };
+
   // Clean up collaboration session
   const leaveRoom = useCallback(() => {
     if (collabRef.current) {
@@ -107,11 +154,21 @@ export const WorkspacePreview = () => {
     setCollabStatus('solo');
     setActivePeers([]);
 
+    // Reset files to solo single file with current selected language
+    setFiles({
+      main: {
+        id: 'main',
+        name: `main.${selectedLanguage.extension || 'js'}`,
+        text: code,
+      },
+    });
+    setActiveFileId('main');
+
     // Clear URL query param if present
     const url = new URL(window.location.href);
     url.searchParams.delete('room');
     window.history.replaceState({}, '', url.toString());
-  }, []);
+  }, [code, selectedLanguage]);
 
   // Connect to a collaboration room
   const connectToRoom = useCallback(async (roomId) => {
@@ -161,6 +218,41 @@ export const WorkspacePreview = () => {
       collabRef.current = collab;
       setCollabYText(collab.ytext);
       setCollabProvider(collab.provider);
+
+      // 4. Hydrate files from Y.Doc filesMap and observe changes
+      const syncFilesFromYDoc = () => {
+        const nextFiles = {};
+        collab.filesMap.forEach((val, key) => {
+          if (val && typeof val.get === 'function') {
+            const id = val.get('id') || key;
+            const name = val.get('name') || `file_${key}`;
+            const textObj = val.get('text');
+            nextFiles[key] = {
+              id,
+              name,
+              text: textObj ? textObj.toString() : '',
+              ytext: textObj,
+            };
+          }
+        });
+
+        if (Object.keys(nextFiles).length > 0) {
+          setFiles(nextFiles);
+          setActiveFileId((currentActiveId) => {
+            const targetId = nextFiles[currentActiveId] ? currentActiveId : Object.keys(nextFiles)[0];
+            const targetFile = nextFiles[targetId];
+            if (targetFile) {
+              setCollabYText(targetFile.ytext || collab.ytext);
+              const lang = getLanguageByFilename(targetFile.name);
+              if (lang) setSelectedLanguage(lang);
+            }
+            return targetId;
+          });
+        }
+      };
+
+      collab.filesMap.observeDeep(syncFilesFromYDoc);
+      syncFilesFromYDoc();
 
       // Observe room metadata for shared execution output, language, and stdin (Architecture Section 6.2 & 7)
       collab.ymeta.observe(() => {
@@ -238,6 +330,173 @@ export const WorkspacePreview = () => {
     }
   }, [connectToRoom, currentRoom]);
 
+  // Handle file selection
+  const handleSelectFile = useCallback((fileId) => {
+    setActiveFileId(fileId);
+    const targetFile = files[fileId];
+    if (targetFile) {
+      if (collabRef.current) {
+        setCollabYText(targetFile.ytext || collabRef.current.ytext);
+        if (collabRef.current.provider) {
+          collabRef.current.provider.setAwarenessField('user', {
+            ...(currentUser ? { name: currentUser.displayName || currentUser.name, email: currentUser.email } : {}),
+            role: userRole,
+            activeFile: fileId,
+          });
+        }
+      } else {
+        setCode(targetFile.text || '');
+      }
+      const lang = getLanguageByFilename(targetFile.name);
+      if (lang) setSelectedLanguage(lang);
+    }
+  }, [currentUser, files, userRole]);
+
+  // Handle adding a new file (limit 20 files)
+  const handleAddFile = useCallback((fileName) => {
+    if (userRole === 'viewer') return;
+    const trimmed = fileName?.trim();
+    if (!trimmed) return;
+    const lang = getLanguageByFilename(trimmed);
+    const defaultContent = lang?.defaultCode || `// ${trimmed}\n`;
+
+    if (collabRef.current?.filesMap) {
+      const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+      const fileMap = new Y.Map();
+      fileMap.set('id', fileId);
+      fileMap.set('name', trimmed);
+      const text = new Y.Text();
+      text.insert(0, defaultContent);
+      fileMap.set('text', text);
+      fileMap.set('createdAt', Date.now());
+      fileMap.set('updatedAt', Date.now());
+
+      collabRef.current.filesMap.set(fileId, fileMap);
+      setActiveFileId(fileId);
+      setCollabYText(text);
+      if (lang) setSelectedLanguage(lang);
+    } else {
+      const fileId = `file_${Date.now()}`;
+      setFiles((prev) => ({
+        ...prev,
+        [fileId]: {
+          id: fileId,
+          name: trimmed,
+          text: defaultContent,
+        },
+      }));
+      setActiveFileId(fileId);
+      setCode(defaultContent);
+      if (lang) setSelectedLanguage(lang);
+    }
+  }, [userRole]);
+
+  // Handle renaming a file
+  const handleRenameFile = useCallback((fileId, newName) => {
+    if (userRole === 'viewer') return;
+    const trimmed = newName?.trim();
+    if (!trimmed) return;
+
+    if (collabRef.current?.filesMap) {
+      const fileMap = collabRef.current.filesMap.get(fileId);
+      if (fileMap && typeof fileMap.set === 'function') {
+        fileMap.set('name', trimmed);
+        fileMap.set('updatedAt', Date.now());
+      }
+    } else {
+      setFiles((prev) => {
+        if (!prev[fileId]) return prev;
+        return {
+          ...prev,
+          [fileId]: {
+            ...prev[fileId],
+            name: trimmed,
+          },
+        };
+      });
+    }
+
+    if (fileId === activeFileId) {
+      const lang = getLanguageByFilename(trimmed);
+      if (lang) setSelectedLanguage(lang);
+    }
+  }, [activeFileId, userRole]);
+
+  // Handle deleting a file
+  const handleDeleteFile = useCallback((fileId) => {
+    if (userRole === 'viewer') return;
+    const remainingKeys = Object.keys(files).filter((id) => id !== fileId);
+    if (remainingKeys.length === 0) return;
+
+    if (collabRef.current?.filesMap) {
+      collabRef.current.filesMap.delete(fileId);
+    } else {
+      setFiles((prev) => {
+        const next = { ...prev };
+        delete next[fileId];
+        return next;
+      });
+    }
+
+    if (activeFileId === fileId) {
+      const nextId = remainingKeys[0];
+      handleSelectFile(nextId);
+    }
+  }, [activeFileId, files, handleSelectFile, userRole]);
+
+  // Handle uploading a file
+  const handleUploadFile = useCallback((name, content) => {
+    if (userRole === 'viewer') return;
+    const lang = getLanguageByFilename(name);
+
+    if (collabRef.current?.filesMap) {
+      const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+      const fileMap = new Y.Map();
+      fileMap.set('id', fileId);
+      fileMap.set('name', name);
+      const text = new Y.Text();
+      text.insert(0, content);
+      fileMap.set('text', text);
+      fileMap.set('createdAt', Date.now());
+      fileMap.set('updatedAt', Date.now());
+
+      collabRef.current.filesMap.set(fileId, fileMap);
+      setActiveFileId(fileId);
+      setCollabYText(text);
+      if (lang) setSelectedLanguage(lang);
+    } else {
+      const fileId = `file_${Date.now()}`;
+      setFiles((prev) => ({
+        ...prev,
+        [fileId]: {
+          id: fileId,
+          name,
+          text: content,
+        },
+      }));
+      setActiveFileId(fileId);
+      setCode(content);
+      if (lang) setSelectedLanguage(lang);
+    }
+  }, [userRole]);
+
+  // Handle local code editor changes (solo mode)
+  const handleCodeChange = useCallback((newCode) => {
+    setCode(newCode);
+    if (!collabRef.current) {
+      setFiles((prev) => {
+        if (!prev[activeFileId]) return prev;
+        return {
+          ...prev,
+          [activeFileId]: {
+            ...prev[activeFileId],
+            text: newCode,
+          },
+        };
+      });
+    }
+  }, [activeFileId]);
+
   // Handle switching languages (synced to room meta if collaborating)
   const handleLanguageChange = (lang) => {
     setSelectedLanguage(lang);
@@ -246,7 +505,21 @@ export const WorkspacePreview = () => {
     if (collabRef.current?.ymeta && userRole !== 'viewer') {
       collabRef.current.ymeta.set('language_id', lang.id);
       collabRef.current.ymeta.set('language', lang.key);
-    } else if (!collabYText) {
+    } else if (!collabRef.current) {
+      // In solo mode, update active file's extension & default template
+      if (files[activeFileId]) {
+        const currentName = files[activeFileId].name;
+        const baseName = currentName.includes('.') ? currentName.substring(0, currentName.lastIndexOf('.')) : currentName;
+        const newName = `${baseName}.${lang.extension || 'txt'}`;
+        setFiles((prev) => ({
+          ...prev,
+          [activeFileId]: {
+            ...prev[activeFileId],
+            name: newName,
+            text: lang.defaultCode,
+          },
+        }));
+      }
       setCode(lang.defaultCode);
     }
     setExecutionResult(null);
@@ -280,7 +553,7 @@ export const WorkspacePreview = () => {
     setExecutionResult(null);
   };
 
-  // Execute Code via Judge0 backend API (supporting live room doc per Architecture Section 6.2)
+  // Execute Code via Judge0 backend API (supporting live room doc per Architecture Section 6.2 & Extension Plan Section 3)
   const handleRunCode = useCallback(async () => {
     if (isRunning) return;
     setIsRunning(true);
@@ -291,12 +564,16 @@ export const WorkspacePreview = () => {
         idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
       }
 
-      // If in collaborative room, execute server's copy of room document
+      const activeFile = files[activeFileId] || Object.values(files)[0];
+      const activeCode = collabYText ? collabYText.toString() : (activeFile?.text || code);
+
+      // Execute active file with Judge0 backend API
       const res = await runCodeAPI({
-        source_code: collabYText ? collabYText.toString() : code,
+        source_code: activeCode,
         language_id: selectedLanguage.id,
         stdin,
         roomId: currentRoom ? currentRoom.id : undefined,
+        fileId: currentRoom ? activeFileId : undefined,
         idToken,
       });
 
@@ -321,7 +598,7 @@ export const WorkspacePreview = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [code, collabYText, currentRoom, selectedLanguage, stdin, currentUser, isRunning]);
+  }, [activeFileId, code, collabYText, currentRoom, currentUser, files, isRunning, selectedLanguage, stdin]);
 
   // Test Firebase ID token verification against Express API
   const handleTestBackendAPI = async () => {
@@ -526,6 +803,13 @@ export const WorkspacePreview = () => {
         <aside className="workspace-sidebar">
           <div className="sidebar-icons">
             <button
+              className={`sidebar-tab-btn ${activeSidebarTab === 'files' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarTab(activeSidebarTab === 'files' ? '' : 'files')}
+              title="Workspace Files Explorer"
+            >
+              {activeSidebarTab === 'files' ? <FolderOpen size={18} /> : <Folder size={18} />}
+            </button>
+            <button
               className={`sidebar-tab-btn ${activeSidebarTab === 'templates' ? 'active' : ''}`}
               onClick={() => setActiveSidebarTab(activeSidebarTab === 'templates' ? '' : 'templates')}
               title="Language Templates & Snippets"
@@ -558,6 +842,19 @@ export const WorkspacePreview = () => {
           {/* Collapsible Sidebar Drawer */}
           {activeSidebarTab && (
             <div className="sidebar-drawer-panel">
+              {activeSidebarTab === 'files' && (
+                <FileExplorer
+                  files={files}
+                  activeFileId={activeFileId}
+                  onSelectFile={handleSelectFile}
+                  onAddFile={handleAddFile}
+                  onRenameFile={handleRenameFile}
+                  onDeleteFile={handleDeleteFile}
+                  onUploadFile={handleUploadFile}
+                  isReadOnly={isReadOnly}
+                />
+              )}
+
               {activeSidebarTab === 'templates' && (
                 <div className="drawer-content">
                   <div className="drawer-header">
@@ -717,17 +1014,81 @@ export const WorkspacePreview = () => {
             </div>
           )}
 
+          {/* Multi-File Tab Bar */}
+          <div className="workspace-tabs-bar">
+            <div className="tabs-list">
+              {Object.values(files).map((f) => {
+                const isActive = f.id === activeFileId;
+                const filePeers = activePeers.filter((p) => p.activeFile === f.id);
+                return (
+                  <div
+                    key={f.id}
+                    className={`editor-tab ${isActive ? 'active' : ''}`}
+                    onClick={() => handleSelectFile(f.id)}
+                    title={f.name}
+                  >
+                    {getTabFileIcon(f.name)}
+                    <span className="tab-name font-code">{f.name}</span>
+
+                    {filePeers.length > 0 && (
+                      <div className="tab-peer-dots" title={`Collaborators viewing ${f.name}`}>
+                        {filePeers.slice(0, 3).map((peer, i) => (
+                          <span
+                            key={i}
+                            className="tab-peer-dot"
+                            style={{ backgroundColor: peer.color || '#6366f1' }}
+                            title={peer.name}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {Object.keys(files).length > 1 && !isReadOnly && (
+                      <button
+                        type="button"
+                        className="tab-close-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFile(f.id);
+                        }}
+                        title={`Close ${f.name}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!isReadOnly && Object.keys(files).length < 20 && (
+              <button
+                type="button"
+                className="tab-add-btn"
+                onClick={() => {
+                  const ext = selectedLanguage.extension || 'js';
+                  const newName = `file_${Object.keys(files).length + 1}.${ext}`;
+                  handleAddFile(newName);
+                }}
+                title="Create new file (+)"
+              >
+                <Plus size={14} />
+              </button>
+            )}
+          </div>
+
           {/* Monaco Editor Container */}
           <div className="editor-wrapper">
             <CodeEditor
               code={code}
               language={selectedLanguage.monaco}
-              onChange={setCode}
+              onChange={handleCodeChange}
               onCursorChange={setCursorStats}
               onRunCode={handleRunCode}
               isReadOnly={isReadOnly}
               ytext={collabYText}
               provider={collabProvider}
+              activeFileName={files[activeFileId]?.name || ''}
             />
           </div>
 
@@ -1423,6 +1784,102 @@ export const WorkspacePreview = () => {
           align-items: center;
           gap: 8px;
         }
+        /* Multi-file Tab Bar Styles */
+        .workspace-tabs-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #f1f5f9;
+          border-bottom: 1px solid #e2e8f0;
+          height: 38px;
+          padding: 0 8px;
+          overflow-x: auto;
+          scrollbar-width: thin;
+        }
+        .tabs-list {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          overflow-x: auto;
+          flex: 1;
+        }
+        .editor-tab {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          font-size: 0.78rem;
+          border-radius: 6px 6px 0 0;
+          background: #e2e8f0;
+          color: #64748b;
+          cursor: pointer;
+          border-top: 2px solid transparent;
+          user-select: none;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .editor-tab:hover {
+          background: #cbd5e1;
+          color: #0f172a;
+        }
+        .editor-tab.active {
+          background: #ffffff;
+          color: #0f172a;
+          border-top-color: #6366f1;
+          font-weight: 600;
+          box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.02);
+        }
+        .tab-name {
+          font-size: 0.76rem;
+        }
+        .tab-peer-dots {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          margin-left: 2px;
+        }
+        .tab-peer-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+        }
+        .tab-close-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          padding: 2px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .tab-close-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+        }
+        .tab-add-btn {
+          background: transparent;
+          border: 1px dashed #cbd5e1;
+          color: #64748b;
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          margin-left: 8px;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .tab-add-btn:hover {
+          border-color: #6366f1;
+          color: #6366f1;
+          background: rgba(99, 102, 241, 0.05);
+        }
         .editor-wrapper {
           flex: 1;
           height: 100%;
@@ -1615,6 +2072,32 @@ export const WorkspacePreview = () => {
         .workspace-container.dark .template-card-desc,
         .workspace-container.dark .history-meta-sub {
           color: #94a3b8;
+        }
+        .workspace-container.dark .workspace-tabs-bar {
+          background: #0d121f;
+          border-bottom-color: #1e293b;
+        }
+        .workspace-container.dark .editor-tab {
+          background: #141c2e;
+          color: #94a3b8;
+        }
+        .workspace-container.dark .editor-tab:hover {
+          background: #1e293b;
+          color: #f8fafc;
+        }
+        .workspace-container.dark .editor-tab.active {
+          background: #0a0c10;
+          color: #f8fafc;
+          border-top-color: #06b6d4;
+        }
+        .workspace-container.dark .tab-add-btn {
+          border-color: #334155;
+          color: #94a3b8;
+        }
+        .workspace-container.dark .tab-add-btn:hover {
+          border-color: #06b6d4;
+          color: #06b6d4;
+          background: rgba(6, 182, 212, 0.08);
         }
         .workspace-container.dark .editor-status-bar {
           background: #0d121f;

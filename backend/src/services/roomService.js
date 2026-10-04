@@ -99,12 +99,12 @@ export const updateRoomSnapshot = async (roomId, snapshotBase64) => {
   const byteLength = Buffer.byteLength(snapshotBase64, 'base64');
   const sizeKb = (byteLength / 1024).toFixed(1);
 
-  // Architecture Section 5 limit warning (Firestore 1 MiB doc limit)
-  if (byteLength > 800 * 1024) {
-    console.warn(`⚠️ [SNAPSHOT LIMIT WARNING] Room ${roomId} snapshot is ${sizeKb} KB (approaching 1 MiB Firestore document limit).`);
+  // IDE Extension Plan Section 3 limit warning (700 KB threshold)
+  if (byteLength > 700 * 1024) {
+    console.warn(`⚠️ [SNAPSHOT LIMIT WARNING] Room ${roomId} snapshot is ${sizeKb} KB (approaching 700 KB threshold, 1 MiB max).`);
   }
 
-  // If exceeds 1000 KB, stop updating Firestore to avoid document write failure
+  // If exceeds 1020 KB, stop updating Firestore to avoid document write failure
   if (byteLength > 1020 * 1024) {
     console.warn(`🚨 [SNAPSHOT LIMIT EXCEEDED] Room ${roomId} snapshot is ${sizeKb} KB (>1 MiB). Suppressing Firestore write to preserve live session.`);
     return;

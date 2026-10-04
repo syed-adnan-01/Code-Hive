@@ -40,7 +40,8 @@ export const verifyFirebaseToken = async (req, res, next) => {
   }
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    // Revocation check enabled (true) per IDE Extension Plan Section 2
+    const decodedToken = await admin.auth().verifyIdToken(idToken, true);
     req.user = decodedToken;
     next();
   } catch (error) {

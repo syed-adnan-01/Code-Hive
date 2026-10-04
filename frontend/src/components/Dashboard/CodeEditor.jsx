@@ -13,6 +13,7 @@ export const CodeEditor = ({
   isReadOnly = false,
   ytext = null,
   provider = null,
+  activeFileName = '',
 }) => {
   const { isDark } = useTheme();
   const editorRef = useRef(null);
@@ -92,7 +93,7 @@ export const CodeEditor = ({
       }
     });
 
-    // If Yjs collaborative document is present, bind Monaco to Y.Text
+    // If Yjs collaborative document is present, bind Monaco to active file's Y.Text
     if (ytext && provider) {
       if (bindingRef.current) {
         bindingRef.current.destroy();
@@ -113,18 +114,27 @@ export const CodeEditor = ({
     }
   }, [isDark]);
 
-  // Re-bind when ytext or provider updates
+  // Dynamic file model & language switching per file without memory leaks (IDE Extension Plan Section 3)
   useEffect(() => {
-    if (editorRef.current && ytext && provider) {
+    if (editorRef.current && monacoRef.current) {
       if (bindingRef.current) {
         bindingRef.current.destroy();
+        bindingRef.current = null;
       }
-      bindingRef.current = new MonacoBinding(
-        ytext,
-        editorRef.current.getModel(),
-        new Set([editorRef.current]),
-        provider.awareness
-      );
+
+      const model = editorRef.current.getModel();
+      if (model && language) {
+        monacoRef.current.editor.setModelLanguage(model, language);
+      }
+
+      if (ytext && provider && model) {
+        bindingRef.current = new MonacoBinding(
+          ytext,
+          model,
+          new Set([editorRef.current]),
+          provider.awareness
+        );
+      }
     }
 
     return () => {
@@ -133,7 +143,7 @@ export const CodeEditor = ({
         bindingRef.current = null;
       }
     };
-  }, [ytext, provider]);
+  }, [ytext, provider, language, activeFileName]);
 
   return (
     <div className={`monaco-editor-container ${isDark ? 'dark' : 'light'}`}>
