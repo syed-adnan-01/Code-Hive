@@ -1,5 +1,6 @@
 import { executeJudge0Code } from '../services/judge0Service.js';
 import { SUPPORTED_LANGUAGES, getLanguageById } from '../config/languages.js';
+import { isLanguageEnabled, getEnabledLanguages } from '../services/languageService.js';
 import { getLiveRoomCode, broadcastRoomRunResult } from '../services/collabService.js';
 import { resolveUserRole } from '../services/roomService.js';
 import { saveSubmission, getUserSubmissions } from '../services/submissionService.js';
@@ -64,6 +65,13 @@ export const runCode = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: `Unsupported language_id: ${language_id}. Supported languages: ${SUPPORTED_LANGUAGES.map((l) => `${l.name} (${l.id})`).join(', ')}`,
+      });
+    }
+
+    if (!isLanguageEnabled(language_id)) {
+      return res.status(400).json({
+        success: false,
+        error: `Language "${languageConfig.name}" is currently disabled by administrator.`,
       });
     }
 
@@ -133,7 +141,7 @@ export const runCode = async (req, res) => {
 export const getLanguages = (req, res) => {
   res.status(200).json({
     success: true,
-    languages: SUPPORTED_LANGUAGES,
+    languages: getEnabledLanguages(),
   });
 };
 

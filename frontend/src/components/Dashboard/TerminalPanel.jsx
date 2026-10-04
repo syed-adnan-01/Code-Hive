@@ -12,7 +12,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -21,6 +22,8 @@ export const TerminalPanel = ({
   isRunning,
   onRunCode,
   onClearOutput,
+  onExplainError,
+  isAiAnalyzing = false,
 }) => {
   const { isDark } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -106,6 +109,19 @@ export const TerminalPanel = ({
         </div>
 
         <div className="header-actions">
+          {executionResult && (executionResult.stderr || executionResult.compile_output || (executionResult.status && executionResult.status.id !== 3)) && (
+            <button
+              type="button"
+              className="btn-terminal-ai-explain font-brand"
+              onClick={onExplainError}
+              disabled={isAiAnalyzing}
+              title="Ask CodeHive AI to diagnose error and generate diff fix"
+            >
+              <Sparkles size={13} className="text-amber" />
+              <span>{isAiAnalyzing ? 'AI Analyzing...' : 'Explain with AI'}</span>
+            </button>
+          )}
+
           <button
             className="btn-terminal-run"
             onClick={onRunCode}
@@ -171,6 +187,15 @@ export const TerminalPanel = ({
                   <div className="section-title">
                     <XCircle size={14} />
                     <span>Compilation Output</span>
+                    <button
+                      type="button"
+                      className="btn-inline-ai-explain"
+                      onClick={onExplainError}
+                      disabled={isAiAnalyzing}
+                    >
+                      <Sparkles size={12} className="text-amber" />
+                      <span>{isAiAnalyzing ? 'Analyzing...' : 'Explain with AI'}</span>
+                    </button>
                   </div>
                   <pre className="output-pre text-error">{executionResult.compile_output}</pre>
                 </div>
@@ -182,6 +207,15 @@ export const TerminalPanel = ({
                   <div className="section-title">
                     <AlertCircle size={14} />
                     <span>Standard Error (stderr)</span>
+                    <button
+                      type="button"
+                      className="btn-inline-ai-explain"
+                      onClick={onExplainError}
+                      disabled={isAiAnalyzing}
+                    >
+                      <Sparkles size={12} className="text-amber" />
+                      <span>{isAiAnalyzing ? 'Analyzing...' : 'Explain with AI'}</span>
+                    </button>
                   </div>
                   <pre className="output-pre text-error">{executionResult.stderr}</pre>
                 </div>
@@ -509,6 +543,57 @@ export const TerminalPanel = ({
         }
         .fill-emerald {
           fill: currentColor;
+        }
+        .btn-terminal-ai-explain {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          border-radius: 6px;
+          border: 1px solid rgba(245, 158, 11, 0.4);
+          background: rgba(245, 158, 11, 0.12);
+          color: #d97706;
+          font-size: 0.76rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .terminal-panel.dark .btn-terminal-ai-explain {
+          background: rgba(245, 158, 11, 0.18);
+          color: #fbbf24;
+          border-color: rgba(245, 158, 11, 0.5);
+        }
+        .btn-terminal-ai-explain:hover:not(:disabled) {
+          background: #f59e0b;
+          color: #ffffff;
+          transform: translateY(-1px);
+        }
+        .btn-terminal-ai-explain:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .btn-inline-ai-explain {
+          margin-left: auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 3px 9px;
+          border-radius: 6px;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          background: rgba(245, 158, 11, 0.1);
+          color: #d97706;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .terminal-panel.dark .btn-inline-ai-explain {
+          color: #fbbf24;
+          border-color: rgba(245, 158, 11, 0.4);
+        }
+        .btn-inline-ai-explain:hover:not(:disabled) {
+          background: #f59e0b;
+          color: white;
         }
       `}</style>
     </div>

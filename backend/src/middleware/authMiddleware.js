@@ -1,4 +1,5 @@
 import { admin, isFirebaseAdminInitialized } from '../config/firebaseAdmin.js';
+import { isUserDisabled } from '../services/adminService.js';
 
 export const verifyFirebaseToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -13,11 +14,12 @@ export const verifyFirebaseToken = async (req, res, next) => {
   const idToken = authHeader.split('Bearer ')[1];
 
   if (!isFirebaseAdminInitialized) {
-    // Demo Mode token fallback: supports distinct demo users (e.g. demo-alice-token, demo-charlie-token)
+    // Demo Mode token fallback: supports distinct demo users (e.g. demo-alice-token, demo-admin-token)
     const tokenClean = idToken.trim();
     let uid = 'demo-user-uid';
     let name = 'Demo Hive Developer';
     let email = 'demo.developer@codehive.dev';
+    let isAdmin = false;
 
     if (tokenClean.startsWith('demo-')) {
       const match = tokenClean.match(/^demo-([a-zA-Z0-9_-]+?)(?:-token)?$/);
@@ -26,6 +28,9 @@ export const verifyFirebaseToken = async (req, res, next) => {
         uid = `demo-${username}-uid`;
         name = username.charAt(0).toUpperCase() + username.slice(1);
         email = `${username}@codehive.dev`;
+        if (username.toLowerCase().includes('admin')) {
+          isAdmin = true;
+        }
       }
     }
 
@@ -35,14 +40,33 @@ export const verifyFirebaseToken = async (req, res, next) => {
       name,
       displayName: name,
       isDemoUser: true,
+      admin: isAdmin,
     };
+
+    // Check if demo user has been disabled by admin
+    if (await isUserDisabled(uid)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Account disabled. Access revoked by administrator.',
+      });
+    }
+
     return next();
   }
 
   try {
-    // Revocation check enabled (true) per IDE Extension Plan Section 2
+    // Revocation check enabled (true) per IDE Extension Plan Section 2 & 4
     const decodedToken = await admin.auth().verifyIdToken(idToken, true);
     req.user = decodedToken;
+
+    // Check if account has been disabled
+    if (await isUserDisabled(decodedToken.uid)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Account disabled. Access revoked by administrator.',
+      });
+    }
+
     next();
   } catch (error) {
     console.error('Token verification error:', error.message);
@@ -52,4 +76,15 @@ export const verifyFirebaseToken = async (req, res, next) => {
       details: error.message,
     });
   }
+};
+
+// Middleware enforcing Admin privileges (IDE Extension Plan Section 4)
+export const requireAdmin = (req, res, next) => {
+  if (!req.user || !req.user.admin) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden. Administrator privileges required.',
+    });
+  }
+  next();
 };

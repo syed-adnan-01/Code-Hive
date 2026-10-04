@@ -7,6 +7,11 @@ import { TerminalPanel } from './TerminalPanel';
 import { StdinPanel } from './StdinPanel';
 import { RoomModal } from './RoomModal';
 import { FileExplorer } from './FileExplorer';
+import { ChatPanel } from './ChatPanel';
+import { AdminPanel } from '../Admin/AdminPanel';
+import { AiDebugModal } from './AiDebugModal';
+import { CallPanel } from './CallPanel';
+import { debugCodeAPI } from '../../services/aiService';
 import { SUPPORTED_LANGUAGES, getLanguageById, getLanguageByFilename } from '../../config/languages';
 import { runCodeAPI, fetchRunHistoryAPI } from '../../services/runService';
 import {
@@ -44,6 +49,9 @@ import {
   FileText,
   Code2,
   FileJson,
+  MessageSquare,
+  Video,
+  PhoneCall,
 } from 'lucide-react';
 
 export const WorkspacePreview = () => {
@@ -74,11 +82,35 @@ export const WorkspacePreview = () => {
   // Collaboration Room states
   const [currentRoom, setCurrentRoom] = useState(null);
   const [userRole, setUserRole] = useState('editor'); // 'owner' | 'editor' | 'viewer'
+  const isReadOnly = userRole === 'viewer';
   const [collabStatus, setCollabStatus] = useState('solo'); // 'solo' | 'connecting' | 'connected' | 'disconnected'
   const [activePeers, setActivePeers] = useState([]);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [isShareCopied, setIsShareCopied] = useState(false);
   const [roomActionLoading, setRoomActionLoading] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
+  // WebRTC Audio/Video Call state (Week D)
+  const [isCallPanelOpen, setIsCallPanelOpen] = useState(false);
+
+  // AI Assistant & Debugger state (Week C)
+  const [isAiDebugModalOpen, setIsAiDebugModalOpen] = useState(false);
+  const [aiDebugResult, setAiDebugResult] = useState(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [enableAiSuggestions, setEnableAiSuggestions] = useState(true);
+  const [userToken, setUserToken] = useState(currentUser?.isDemo ? 'demo-bearer-token' : null);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.isDemo) {
+        setUserToken('demo-bearer-token');
+      } else if (typeof currentUser.getIdToken === 'function') {
+        currentUser.getIdToken().then(setUserToken).catch(() => {});
+      }
+    } else {
+      setUserToken(null);
+    }
+  }, [currentUser]);
 
   // Yjs Collaboration References
   const collabRef = useRef(null);
@@ -600,6 +632,58 @@ export const WorkspacePreview = () => {
     }
   }, [activeFileId, code, collabYText, currentRoom, currentUser, files, isRunning, selectedLanguage, stdin]);
 
+  // AI Error Diagnosis & Diff Fix generation (Week C - Section 6.2)
+  const handleExplainError = useCallback(async () => {
+    if (isAiAnalyzing) return;
+    setIsAiAnalyzing(true);
+    try {
+      let idToken = userToken;
+      if (!idToken && currentUser) {
+        idToken = currentUser.isDemo ? 'demo-bearer-token' : (await currentUser.getIdToken?.());
+      }
+      const activeFile = files[activeFileId] || Object.values(files)[0];
+      const currentCode = collabYText ? collabYText.toString() : (activeFile?.text || code);
+      const errorText = executionResult?.stderr || executionResult?.compile_output || (executionResult?.status?.description ? `Status: ${executionResult.status.description}` : 'Execution failed');
+
+      const res = await debugCodeAPI({
+        code: currentCode,
+        language: selectedLanguage.key || selectedLanguage.monaco,
+        error: errorText,
+        idToken,
+      });
+
+      setAiDebugResult(res);
+      setIsAiDebugModalOpen(true);
+    } catch (err) {
+      console.error('AI Debugging request failed:', err);
+      alert(`AI Debugger error: ${err.message}`);
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  }, [activeFileId, code, collabYText, currentUser, executionResult, files, isAiAnalyzing, selectedLanguage, userToken]);
+
+  // Apply AI Fix to editor and sync across collaborators
+  const handleApplyAiFix = useCallback((fixedCode) => {
+    if (isReadOnly || !fixedCode) return;
+    if (collabYText) {
+      collabYText.delete(0, collabYText.length);
+      collabYText.insert(0, fixedCode);
+    } else {
+      setCode(fixedCode);
+      setFiles((prev) => {
+        if (!prev[activeFileId]) return prev;
+        return {
+          ...prev,
+          [activeFileId]: {
+            ...prev[activeFileId],
+            text: fixedCode,
+          },
+        };
+      });
+    }
+    setIsAiDebugModalOpen(false);
+  }, [activeFileId, collabYText, isReadOnly]);
+
   // Test Firebase ID token verification against Express API
   const handleTestBackendAPI = async () => {
     setLoadingApi(true);
@@ -624,8 +708,6 @@ export const WorkspacePreview = () => {
       setLoadingApi(false);
     }
   };
-
-  const isReadOnly = userRole === 'viewer';
 
   return (
     <div className={`workspace-container ${isDark ? 'dark' : 'light'}`}>
@@ -766,6 +848,32 @@ export const WorkspacePreview = () => {
             <span>Stdin {stdin ? `(${stdin.length}c)` : ''}</span>
           </button>
 
+          {/* AI Suggestions Toggle Button */}
+          {!isReadOnly && (
+            <button
+              type="button"
+              className={`btn-ai-toggle font-brand ${enableAiSuggestions ? 'active' : ''}`}
+              onClick={() => setEnableAiSuggestions(!enableAiSuggestions)}
+              title={enableAiSuggestions ? 'AI Inline Suggestions Enabled (Tab to accept)' : 'AI Inline Suggestions Disabled'}
+            >
+              <Sparkles size={13} className={enableAiSuggestions ? 'text-amber animate-pulse' : 'text-slate'} />
+              <span>AI {enableAiSuggestions ? 'ON' : 'OFF'}</span>
+            </button>
+          )}
+
+          {/* WebRTC Voice & Video Call Toggle */}
+          {currentRoom && (
+            <button
+              type="button"
+              className={`btn-call-toggle font-brand ${isCallPanelOpen ? 'active' : ''}`}
+              onClick={() => setIsCallPanelOpen(!isCallPanelOpen)}
+              title="Open Room Voice & Video Call (WebRTC mesh up to 4 participants)"
+            >
+              <Video size={13} className={isCallPanelOpen ? 'text-emerald animate-pulse' : 'text-slate'} />
+              <span>Call</span>
+            </button>
+          )}
+
           {/* Primary Run Code Button */}
           <button
             className="btn-run-main"
@@ -824,11 +932,34 @@ export const WorkspacePreview = () => {
               <History size={18} />
             </button>
             <button
+              className={`sidebar-tab-btn ${activeSidebarTab === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarTab(activeSidebarTab === 'chat' ? '' : 'chat')}
+              title="Room Live Chat"
+            >
+              <MessageSquare size={18} />
+            </button>
+            {currentRoom && (
+              <button
+                className={`sidebar-tab-btn ${isCallPanelOpen ? 'active' : ''}`}
+                onClick={() => setIsCallPanelOpen(!isCallPanelOpen)}
+                title="Room Voice & Video Call"
+              >
+                <Video size={18} className={isCallPanelOpen ? 'text-emerald' : ''} />
+              </button>
+            )}
+            <button
               className={`sidebar-tab-btn ${activeSidebarTab === 'rooms' ? 'active' : ''}`}
               onClick={() => setIsRoomModalOpen(true)}
               title="Create or Join Live Rooms"
             >
               <Users2 size={18} />
+            </button>
+            <button
+              className="sidebar-tab-btn admin-sidebar-tab"
+              onClick={() => setIsAdminModalOpen(true)}
+              title="CodeHive Administration Console"
+            >
+              <ShieldCheck size={18} className="text-indigo" />
             </button>
             <button
               className={`sidebar-tab-btn ${activeSidebarTab === 'api' ? 'active' : ''}`}
@@ -852,6 +983,14 @@ export const WorkspacePreview = () => {
                   onDeleteFile={handleDeleteFile}
                   onUploadFile={handleUploadFile}
                   isReadOnly={isReadOnly}
+                />
+              )}
+
+              {activeSidebarTab === 'chat' && (
+                <ChatPanel
+                  roomId={currentRoom?.id}
+                  userRole={userRole}
+                  onOpenRoomModal={() => setIsRoomModalOpen(true)}
                 />
               )}
 
@@ -1089,6 +1228,8 @@ export const WorkspacePreview = () => {
               ytext={collabYText}
               provider={collabProvider}
               activeFileName={files[activeFileId]?.name || ''}
+              enableAiSuggestions={enableAiSuggestions}
+              idToken={userToken}
             />
           </div>
 
@@ -1101,12 +1242,14 @@ export const WorkspacePreview = () => {
             isReadOnly={isReadOnly}
           />
 
-          {/* Terminal / Output Console */}
+          {/* Terminal / Output Console with AI Diagnosis */}
           <TerminalPanel
             executionResult={executionResult}
             isRunning={isRunning}
             onRunCode={handleRunCode}
             onClearOutput={() => setExecutionResult(null)}
+            onExplainError={handleExplainError}
+            isAiAnalyzing={isAiAnalyzing}
           />
 
           {/* Bottom Editor Status Bar */}
@@ -1140,6 +1283,32 @@ export const WorkspacePreview = () => {
         onCreateRoom={handleCreateRoom}
         onJoinRoom={connectToRoom}
         loading={roomActionLoading}
+      />
+
+      {/* CodeHive Administration Console */}
+      {isAdminModalOpen && (
+        <AdminPanel onClose={() => setIsAdminModalOpen(false)} />
+      )}
+
+      {/* AI Debugger Diff Modal (IDE Extension Plan Section 6.2) */}
+      <AiDebugModal
+        isOpen={isAiDebugModalOpen}
+        onClose={() => setIsAiDebugModalOpen(false)}
+        debugResult={aiDebugResult}
+        originalCode={collabYText ? collabYText.toString() : (files[activeFileId]?.text || code)}
+        language={selectedLanguage.monaco}
+        onApplyFix={handleApplyAiFix}
+        isReadOnly={isReadOnly}
+      />
+
+      {/* WebRTC Audio & Video Call Panel (IDE Extension Plan Section 7) */}
+      <CallPanel
+        roomId={currentRoom?.id}
+        currentUser={currentUser}
+        idToken={userToken}
+        userRole={userRole}
+        isOpen={isCallPanelOpen}
+        onClose={() => setIsCallPanelOpen(false)}
       />
 
       <style>{`
@@ -1476,6 +1645,56 @@ export const WorkspacePreview = () => {
           border-color: #06b6d4;
           color: #0891b2;
           font-weight: 700;
+        }
+        .btn-ai-toggle {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          border-radius: 50px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
+        .btn-ai-toggle.active {
+          background: #fef3c7;
+          border-color: #fde68a;
+          color: #b45309;
+          box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15);
+        }
+        .btn-ai-toggle:hover {
+          border-color: #cbd5e1;
+        }
+        .btn-ai-toggle.active:hover {
+          background: #fde68a;
+        }
+        .btn-call-toggle {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          border-radius: 50px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.18s ease;
+        }
+        .btn-call-toggle:hover {
+          border-color: #cbd5e1;
+          color: #0f172a;
+        }
+        .btn-call-toggle.active {
+          background: #ecfdf5;
+          border-color: #a7f3d0;
+          color: #059669;
+          box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15);
         }
         .btn-run-main {
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);

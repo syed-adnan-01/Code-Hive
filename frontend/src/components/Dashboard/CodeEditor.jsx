@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import { MonacoBinding } from 'y-monaco';
 import { Hexagon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { suggestCodeAPI } from '../../services/aiService';
 
 export const CodeEditor = ({
   code,
@@ -14,6 +15,8 @@ export const CodeEditor = ({
   ytext = null,
   provider = null,
   activeFileName = '',
+  enableAiSuggestions = true,
+  idToken = null,
 }) => {
   const { isDark } = useTheme();
   const editorRef = useRef(null);
@@ -145,6 +148,82 @@ export const CodeEditor = ({
     };
   }, [ytext, provider, language, activeFileName]);
 
+  // Register AI Inline Code Completions Provider (IDE Extension Plan Section 6.3)
+  useEffect(() => {
+    if (!monacoRef.current || isReadOnly || !enableAiSuggestions) return;
+
+    const monaco = monacoRef.current;
+    let debounceTimer = null;
+
+    const providerDisposable = monaco.languages.registerInlineCompletionsProvider(
+      language || '*',
+      {
+        provideInlineCompletions: async (model, position, context, token) => {
+          if (!enableAiSuggestions || isReadOnly) return { items: [] };
+
+          return new Promise((resolve) => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+
+            debounceTimer = setTimeout(async () => {
+              if (token.isCancellationRequested) {
+                return resolve({ items: [] });
+              }
+
+              try {
+                const textBefore = model.getValueInRange({
+                  startLineNumber: Math.max(1, position.lineNumber - 60),
+                  startColumn: 1,
+                  endLineNumber: position.lineNumber,
+                  endColumn: position.column,
+                });
+
+                const textAfter = model.getValueInRange({
+                  startLineNumber: position.lineNumber,
+                  startColumn: position.column,
+                  endLineNumber: Math.min(model.getLineCount(), position.lineNumber + 20),
+                  endColumn: model.getLineMaxColumn(Math.min(model.getLineCount(), position.lineNumber + 20)),
+                });
+
+                const res = await suggestCodeAPI({
+                  prefix: textBefore,
+                  suffix: textAfter,
+                  language,
+                  idToken,
+                });
+
+                if (token.isCancellationRequested || !res.suggestion) {
+                  return resolve({ items: [] });
+                }
+
+                resolve({
+                  items: [
+                    {
+                      insertText: res.suggestion,
+                      range: new monaco.Range(
+                        position.lineNumber,
+                        position.column,
+                        position.lineNumber,
+                        position.column
+                      ),
+                    },
+                  ],
+                });
+              } catch (err) {
+                resolve({ items: [] });
+              }
+            }, 700); // 700 ms debounce per Section 6.3
+          });
+        },
+        freeInlineCompletions: () => {},
+      }
+    );
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      providerDisposable.dispose();
+    };
+  }, [language, enableAiSuggestions, isReadOnly, idToken]);
+
   return (
     <div className={`monaco-editor-container ${isDark ? 'dark' : 'light'}`}>
       <Editor
@@ -174,6 +253,10 @@ export const CodeEditor = ({
           renderLineHighlight: 'all',
           bracketPairColorization: { enabled: true },
           lineNumbersMinChars: 3,
+          inlineSuggest: {
+            enabled: enableAiSuggestions && !isReadOnly,
+            mode: 'subsequent',
+          },
         }}
         loading={
           <div className="monaco-loading-spinner font-brand">

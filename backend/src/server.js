@@ -5,7 +5,11 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import runRoutes from './routes/runRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import rtcRoutes from './routes/rtcRoutes.js';
 import { initCollabServer } from './services/collabService.js';
+import { initLanguagesFromFirestore } from './services/languageService.js';
 
 dotenv.config();
 
@@ -37,8 +41,12 @@ app.use((err, req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/run', runRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/rtc', rtcRoutes);
 
-// Initialize Hocuspocus Collab Server for WebSocket real-time sync
+// Load persisted language settings & initialize collab server
+initLanguagesFromFirestore();
 initCollabServer(httpServer);
 
 app.get('/', (req, res) => {
@@ -53,6 +61,11 @@ app.get('/', (req, res) => {
       languages: '/api/run/languages (GET)',
       rooms: '/api/rooms (Protected POST/GET)',
       roomTicket: '/api/rooms/:id/ticket (Protected POST)',
+      roomMessages: '/api/rooms/:id/messages (Protected POST/GET)',
+      adminLanguages: '/api/admin/languages (Admin GET/PATCH)',
+      adminUsers: '/api/admin/users (Admin GET/POST)',
+      adminStats: '/api/admin/stats (Admin GET)',
+      adminLogs: '/api/admin/logs (Admin GET)',
     },
     websocket: `ws://localhost:${PORT}`,
   });
