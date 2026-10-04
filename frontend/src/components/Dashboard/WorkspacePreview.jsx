@@ -1,215 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { FileExplorer } from './FileExplorer';
 import { CodeEditor } from './CodeEditor';
 import { TerminalPanel } from './TerminalPanel';
+import { StdinPanel } from './StdinPanel';
+import { SUPPORTED_LANGUAGES } from '../../config/languages';
+import { runCodeAPI } from '../../services/runService';
 import {
   Code,
-  LogOut,
   Play,
   Share2,
   Zap,
   Server,
-  X,
-  FolderTree,
-  User,
-  CheckCircle2
+  Sparkles,
+  ChevronDown,
+  Terminal,
+  FileCode,
+  ShieldCheck,
+  CheckCircle2,
+  Users2,
+  RotateCcw
 } from 'lucide-react';
 
-const INITIAL_FILES = {
-  'App.jsx': `import React, { useState, useEffect } from 'react';
-
-// 🐝 Welcome to CodeHive Workspace Room: #hive-alpha
-export default function CodeHiveApp() {
-  const [peers, setPeers] = useState(['Alex', 'Sarah', 'You']);
-  const [status, setStatus] = useState('Syncing code changes live...');
-
-  const handleExecute = () => {
-    console.log('🐝 Executing CodeHive Live Application...');
-    return 'Hive engine active across 3 peers!';
-  };
-
-  return (
-    <div className="hive-workspace">
-      <h1>CodeHive Live Collaboration Room 🚀</h1>
-      <p>{status}</p>
-    </div>
-  );
-}`,
-  'server.js': `import express from 'express';
-import { verifyFirebaseToken } from './authMiddleware.js';
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.get('/api/workspace/stream', verifyFirebaseToken, (req, res) => {
-  res.json({
-    status: 'connected',
-    user: req.user.email,
-    workspace: 'Hive Alpha',
-    latencyMs: 12
-  });
-});
-
-console.log(\`Server initialized on port \${PORT}\`);`,
-  'styles.css': `/* CodeHive Workspace Theme Variables */
-.hive-workspace {
-  background: rgba(15, 18, 26, 0.95);
-  color: #f8fafc;
-  padding: 24px;
-  border-radius: 16px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-}`,
-  'utils.js': `// Helper functions for CodeHive collaboration
-export const calculateLatency = (t1, t2) => Math.abs(t2 - t1);
-
-export const formatUserInitials = (name) => {
-  if (!name) return 'U';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase();
-};`
-};
-
 export const WorkspacePreview = () => {
-  const { currentUser, logout } = useAuth();
-  const [files, setFiles] = useState(INITIAL_FILES);
-  const [activeFile, setActiveFile] = useState('App.jsx');
-  const [openTabs, setOpenTabs] = useState(['App.jsx', 'server.js']);
-  const [dirtyFiles, setDirtyFiles] = useState(new Set());
-  const [logs, setLogs] = useState([
-    {
-      type: 'info',
-      message: 'CodeHive IDE Engine initialized successfully. Ready for live editing.',
-      timestamp: new Date().toLocaleTimeString()
-    }
-  ]);
+  const { currentUser, logout, isDemoMode } = useAuth();
+
+  // Active language and code state
+  const [selectedLanguage, setSelectedLanguage] = useState(SUPPORTED_LANGUAGES[0]);
+  const [code, setCode] = useState(SUPPORTED_LANGUAGES[0].defaultCode);
+  const [stdin, setStdin] = useState('');
+  const [isStdinOpen, setIsStdinOpen] = useState(false);
+
+  // Execution state
   const [isRunning, setIsRunning] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
   const [cursorStats, setCursorStats] = useState({ line: 1, col: 1 });
-  const [sidebarTab, setSidebarTab] = useState('explorer'); // 'explorer' | 'profile' | 'api'
+
+  // Sidebar / Drawer states
+  const [activeSidebarTab, setActiveSidebarTab] = useState('templates'); // 'templates' | 'api' | 'profile'
   const [apiResponse, setApiResponse] = useState(null);
   const [loadingApi, setLoadingApi] = useState(false);
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
-  // File Management
-  const handleSelectFile = (filename) => {
-    setActiveFile(filename);
-    if (!openTabs.includes(filename)) {
-      setOpenTabs([...openTabs, filename]);
+  // Handle switching languages
+  const handleLanguageChange = (lang) => {
+    setSelectedLanguage(lang);
+    setIsLangDropdownOpen(false);
+
+    // If current code matches default code of previous language or is empty, load new language template
+    setCode(lang.defaultCode);
+    setExecutionResult(null);
+  };
+
+  // Load Stdin template for the current language
+  const handleLoadStdinTemplate = () => {
+    if (selectedLanguage.stdinTemplate) {
+      setCode(selectedLanguage.stdinTemplate);
+      setStdin('5\n10 20 30 40 50');
+      setIsStdinOpen(true);
+      setExecutionResult(null);
     }
   };
 
-  const handleCloseTab = (filename, e) => {
-    e.stopPropagation();
-    const filtered = openTabs.filter(t => t !== filename);
-    setOpenTabs(filtered);
-    if (activeFile === filename && filtered.length > 0) {
-      setActiveFile(filtered[filtered.length - 1]);
-    }
+  // Reset to default Hello World template
+  const handleResetTemplate = () => {
+    setCode(selectedLanguage.defaultCode);
+    setExecutionResult(null);
   };
 
-  const handleAddFile = (newFilename) => {
-    if (files[newFilename]) return;
-    setFiles({
-      ...files,
-      [newFilename]: `// New file: ${newFilename}\n\nconsole.log("Hello from ${newFilename}");`
-    });
-    setOpenTabs([...openTabs, newFilename]);
-    setActiveFile(newFilename);
-    setLogs(prev => [
-      ...prev,
-      {
-        type: 'info',
-        message: `Created new file: ${newFilename}`,
-        timestamp: new Date().toLocaleTimeString()
-      }
-    ]);
-  };
-
-  const handleDeleteFile = (filename) => {
-    if (Object.keys(files).length <= 1) return;
-    const remaining = { ...files };
-    delete remaining[filename];
-    setFiles(remaining);
-    const filteredTabs = openTabs.filter(t => t !== filename);
-    setOpenTabs(filteredTabs);
-    if (activeFile === filename && filteredTabs.length > 0) {
-      setActiveFile(filteredTabs[0]);
-    }
-  };
-
-  const handleCodeChange = (newCode) => {
-    setFiles({
-      ...files,
-      [activeFile]: newCode
-    });
-    if (!dirtyFiles.has(activeFile)) {
-      setDirtyFiles(new Set(dirtyFiles).add(activeFile));
-    }
-  };
-
-  // Code Execution Runner
-  const handleRunCode = () => {
+  // Execute Code via Judge0 backend API
+  const handleRunCode = useCallback(async () => {
+    if (isRunning) return;
     setIsRunning(true);
-    const startTime = performance.now();
-    const currentCode = files[activeFile];
-    const timestamp = new Date().toLocaleTimeString();
 
-    // Clear saved dirty state on run
-    const updatedDirty = new Set(dirtyFiles);
-    updatedDirty.delete(activeFile);
-    setDirtyFiles(updatedDirty);
-
-    setTimeout(() => {
-      try {
-        const capturedLogs = [];
-        // Safe evaluation / log capture simulation
-        const customConsole = {
-          log: (...args) => capturedLogs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
-          warn: (...args) => capturedLogs.push(`[WARN] ${args.join(' ')}`),
-          error: (...args) => capturedLogs.push(`[ERROR] ${args.join(' ')}`)
-        };
-
-        // If JS/JSX, try extracting console statements or evaluating simple expressions safely
-        if (activeFile.endsWith('.js') || activeFile.endsWith('.jsx')) {
-          const fn = new Function('console', currentCode);
-          fn(customConsole);
-        }
-
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(1);
-
-        const newEntries = [];
-        if (capturedLogs.length > 0) {
-          capturedLogs.forEach(msg => {
-            newEntries.push({ type: 'info', message: msg, timestamp });
-          });
-        }
-        newEntries.push({
-          type: 'success',
-          message: `Executed ${activeFile} successfully in ${duration}ms`,
-          timestamp
-        });
-
-        setLogs(prev => [...prev, ...newEntries]);
-      } catch (err) {
-        setLogs(prev => [
-          ...prev,
-          {
-            type: 'error',
-            message: `Runtime Error in ${activeFile}: ${err.message}`,
-            timestamp
-          }
-        ]);
-      } finally {
-        setIsRunning(false);
+    try {
+      let idToken = null;
+      if (currentUser) {
+        idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
       }
-    }, 250);
-  };
 
+      const res = await runCodeAPI({
+        source_code: code,
+        language_id: selectedLanguage.id,
+        stdin,
+        idToken,
+      });
+
+      if (res.success && res.submission) {
+        setExecutionResult(res.submission);
+      } else {
+        throw new Error(res.error || 'Execution returned unexpected response.');
+      }
+    } catch (err) {
+      setExecutionResult({
+        status: { id: 11, description: 'Execution Failed' },
+        stderr: err.message,
+        stdout: null,
+        compile_output: null,
+        time: '0.000',
+        memory: 0,
+      });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [code, selectedLanguage, stdin, currentUser, isRunning]);
+
+  // Test Firebase ID token verification against Express API
   const handleTestBackendAPI = async () => {
     setLoadingApi(true);
     setApiResponse(null);
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const token = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
+      const token = currentUser?.isDemo ? 'demo-bearer-token' : await currentUser?.getIdToken();
 
       const res = await fetch(`${backendUrl}/api/auth/me`, {
         headers: {
@@ -230,208 +131,252 @@ export const WorkspacePreview = () => {
 
   return (
     <div className="workspace-container">
-      {/* Top Bar Header */}
-      <div className="workspace-header glass-card">
+      {/* Top Header Bar */}
+      <div className="workspace-header">
         <div className="header-left">
           <div className="room-badge">
             <span className="live-indicator"></span>
             <span className="room-name font-brand">#hive-alpha-workspace</span>
           </div>
 
+          {/* Language Selector Dropdown */}
+          <div className="language-selector-wrapper">
+            <button
+              type="button"
+              className="btn-language-selector font-code"
+              onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
+            >
+              <span className="lang-color-dot" style={{ backgroundColor: selectedLanguage.badgeColor }}></span>
+              <span className="lang-name">{selectedLanguage.name}</span>
+              <ChevronDown size={14} className={`chevron-icon ${isLangDropdownOpen ? 'open' : ''}`} />
+            </button>
+
+            {isLangDropdownOpen && (
+              <div className="language-dropdown-menu font-code">
+                <div className="dropdown-label">Select Compiler / Runtime</div>
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <div
+                    key={lang.id}
+                    className={`language-menu-item ${selectedLanguage.id === lang.id ? 'active' : ''}`}
+                    onClick={() => handleLanguageChange(lang)}
+                  >
+                    <div className="lang-item-left">
+                      <span className="lang-color-dot" style={{ backgroundColor: lang.badgeColor }}></span>
+                      <span>{lang.name}</span>
+                    </div>
+                    <span className="lang-id-badge">ID: {lang.id}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="latency-badge">
             <Zap size={13} className="text-cyan" />
-            <span>12ms Latency</span>
+            <span>Judge0 Sandboxed</span>
           </div>
         </div>
 
         <div className="header-right">
-          {/* Active Collaborators */}
-          <div className="collaborator-avatars">
-            <div className="avatar-pill avatar-1" title="Alex (Active)">AM</div>
-            <div className="avatar-pill avatar-2" title="Sarah (Active)">SK</div>
-            <div className="avatar-pill avatar-you" title="You">
-              {currentUser?.photoURL ? (
-                <img src={currentUser.photoURL} alt="User" className="avatar-img" />
-              ) : (
-                (currentUser?.displayName || currentUser?.email || 'U')[0].toUpperCase()
-              )}
-            </div>
-            <span className="collaborator-count">+3 live</span>
-          </div>
-
-          {/* Mode Switcher Tabs */}
-          <div className="sidebar-tabs">
-            <button
-              className={`sidebar-tab-btn ${sidebarTab === 'explorer' ? 'active' : ''}`}
-              onClick={() => setSidebarTab('explorer')}
-              title="File Explorer"
-            >
-              <FolderTree size={15} />
-              <span>Files</span>
-            </button>
-            <button
-              className={`sidebar-tab-btn ${sidebarTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setSidebarTab('profile')}
-              title="User Account"
-            >
-              <User size={15} />
-              <span>Profile</span>
-            </button>
-            <button
-              className={`sidebar-tab-btn ${sidebarTab === 'api' ? 'active' : ''}`}
-              onClick={() => setSidebarTab('api')}
-              title="Express API Integration"
-            >
-              <Server size={15} />
-              <span>Backend API</span>
-            </button>
-          </div>
-
-          <button className="btn-vibrant share-btn">
-            <Share2 size={15} />
-            <span>Share Room</span>
+          {/* Quick Template Switchers */}
+          <button
+            type="button"
+            className="btn-template-switch"
+            onClick={handleResetTemplate}
+            title="Reset to Hello World template"
+          >
+            <RotateCcw size={13} />
+            <span>Hello World</span>
           </button>
 
-          <button className="btn-secondary logout-btn" onClick={logout}>
-            <LogOut size={15} />
-            <span>Sign Out</span>
+          <button
+            type="button"
+            className="btn-template-switch"
+            onClick={handleLoadStdinTemplate}
+            title="Load Stdin example program"
+          >
+            <Sparkles size={13} className="text-amber" />
+            <span>Stdin Example</span>
           </button>
+
+          {/* Stdin Toggle Button */}
+          <button
+            type="button"
+            className={`btn-stdin-toggle ${isStdinOpen ? 'active' : ''}`}
+            onClick={() => setIsStdinOpen(!isStdinOpen)}
+            title="Toggle Standard Input (stdin) Panel"
+          >
+            <Terminal size={14} />
+            <span>Stdin {stdin ? `(${stdin.length}c)` : ''}</span>
+          </button>
+
+          {/* Primary Run Code Button */}
+          <button
+            className="btn-run-main"
+            onClick={handleRunCode}
+            disabled={isRunning}
+            title="Run Code via Judge0 API (Ctrl + Enter)"
+          >
+            <Play size={14} className="fill-current" />
+            <span>{isRunning ? 'Running...' : 'Run Code'}</span>
+          </button>
+
+          {/* Collaborator Avatars Preview */}
+          <div className="collaborator-avatars" title="Room Members">
+            <div className="avatar-pill avatar-you font-code">YOU</div>
+          </div>
         </div>
       </div>
 
-      {/* Main IDE Body Layout */}
-      <div className="ide-layout-grid glass-card">
-        {/* Left Sidebar Section */}
-        <div className="ide-sidebar">
-          {sidebarTab === 'explorer' && (
-            <FileExplorer
-              files={files}
-              activeFile={activeFile}
-              onSelectFile={handleSelectFile}
-              onAddFile={handleAddFile}
-              onDeleteFile={handleDeleteFile}
-            />
-          )}
+      {/* Main Workspace Body */}
+      <div className="workspace-main-content">
+        {/* Left Sidebar Tools */}
+        <aside className="workspace-sidebar">
+          <div className="sidebar-icons">
+            <button
+              className={`sidebar-tab-btn ${activeSidebarTab === 'templates' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarTab(activeSidebarTab === 'templates' ? '' : 'templates')}
+              title="Language Templates & Snippets"
+            >
+              <FileCode size={18} />
+            </button>
+            <button
+              className={`sidebar-tab-btn ${activeSidebarTab === 'api' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarTab(activeSidebarTab === 'api' ? '' : 'api')}
+              title="Test Backend Firebase Auth Endpoint"
+            >
+              <Server size={18} />
+            </button>
+          </div>
 
-          {sidebarTab === 'profile' && (
-            <div className="sidebar-profile-card">
-              <div className="user-profile-header">
-                <div className="user-avatar-lg">
-                  {currentUser?.photoURL ? (
-                    <img src={currentUser.photoURL} alt="User" />
-                  ) : (
-                    (currentUser?.displayName || currentUser?.email || 'U')[0].toUpperCase()
-                  )}
-                </div>
-                <div className="user-info">
-                  <h3 className="user-name">{currentUser?.displayName || 'CodeHive Engineer'}</h3>
-                  <p className="user-email">{currentUser?.email}</p>
-                  <div className="user-badge">
-                    {currentUser?.isDemo ? 'Demo Session User' : 'Authenticated via Firebase'}
+          {/* Collapsible Sidebar Drawer */}
+          {activeSidebarTab && (
+            <div className="sidebar-drawer-panel">
+              {activeSidebarTab === 'templates' && (
+                <div className="drawer-content">
+                  <div className="drawer-header">
+                    <span className="font-brand drawer-title">PROGRAM TEMPLATES</span>
+                  </div>
+                  <p className="drawer-desc">
+                    Switch language or load starter snippets for testing multi-language execution and stdin:
+                  </p>
+                  <div className="template-cards-list">
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <div
+                        key={lang.id}
+                        className={`template-card ${selectedLanguage.id === lang.id ? 'active' : ''}`}
+                        onClick={() => handleLanguageChange(lang)}
+                      >
+                        <div className="template-card-header">
+                          <span className="lang-color-dot" style={{ backgroundColor: lang.badgeColor }}></span>
+                          <span className="template-card-name font-code">{lang.name}</span>
+                        </div>
+                        <div className="template-card-actions">
+                          <button
+                            type="button"
+                            className="btn-mini"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLanguageChange(lang);
+                            }}
+                          >
+                            Hello World
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-mini"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLanguage(lang);
+                              if (lang.stdinTemplate) {
+                                setCode(lang.stdinTemplate);
+                                setStdin('5\n10 20 30 40 50');
+                                setIsStdinOpen(true);
+                              }
+                            }}
+                          >
+                            Stdin
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {sidebarTab === 'api' && (
-            <div className="sidebar-api-card">
-              <div className="card-title-row">
-                <Server size={18} className="text-cyan" />
-                <h4>Express Backend API</h4>
-              </div>
-              <p className="card-desc">
-                Test Firebase ID token verification against Express API endpoint (`/api/auth/me`).
-              </p>
-              <button
-                className="btn-secondary test-api-btn"
-                onClick={handleTestBackendAPI}
-                disabled={loadingApi}
-              >
-                {loadingApi ? 'Calling API...' : 'Test Backend Endpoint'}
-              </button>
-              {apiResponse && (
-                <div className="api-response-box font-code">
-                  <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
+              {activeSidebarTab === 'api' && (
+                <div className="drawer-content">
+                  <div className="drawer-header">
+                    <span className="font-brand drawer-title">BACKEND API TEST</span>
+                  </div>
+                  <p className="drawer-desc">
+                    Test Firebase ID token verification against Express API endpoint (<code className="code-tag">/api/auth/me</code>).
+                  </p>
+                  <button
+                    className="btn-secondary test-api-btn"
+                    onClick={handleTestBackendAPI}
+                    disabled={loadingApi}
+                  >
+                    {loadingApi ? 'Calling API...' : 'Test Backend Auth Endpoint'}
+                  </button>
+
+                  {apiResponse && (
+                    <div className="api-response-box font-code">
+                      <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
+        </aside>
 
-        {/* Center/Main Code Editor Window */}
-        <div className="ide-main-window">
-          {/* File Tabs Header */}
-          <div className="editor-tabs-bar">
-            <div className="tabs-scroll-area">
-              {openTabs.map((filename) => (
-                <div
-                  key={filename}
-                  className={`editor-tab ${activeFile === filename ? 'active' : ''}`}
-                  onClick={() => setActiveFile(filename)}
-                >
-                  <Code size={14} className="tab-icon text-indigo" />
-                  <span className="tab-filename font-code">{filename}</span>
-                  {dirtyFiles.has(filename) && <span className="dirty-dot">•</span>}
-                  {openTabs.length > 1 && (
-                    <button
-                      className="tab-close-btn"
-                      onClick={(e) => handleCloseTab(filename, e)}
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="tabs-actions">
-              <button
-                className="btn-run-code"
-                onClick={handleRunCode}
-                disabled={isRunning}
-              >
-                <Play size={13} />
-                <span>{isRunning ? 'Running...' : 'Run Code'}</span>
-              </button>
-            </div>
+        {/* Center: Monaco Code Editor + Stdin + Output Panel */}
+        <div className="editor-central-column">
+          {/* Monaco Editor Container */}
+          <div className="editor-wrapper">
+            <CodeEditor
+              code={code}
+              language={selectedLanguage.monaco}
+              onChange={setCode}
+              onCursorChange={setCursorStats}
+              onRunCode={handleRunCode}
+            />
           </div>
 
-          {/* Interactive Code Editor */}
-          <CodeEditor
-            code={files[activeFile] || ''}
-            onChange={handleCodeChange}
-            onCursorChange={setCursorStats}
-            onRunCode={handleRunCode}
-            filename={activeFile}
+          {/* Standard Input Panel */}
+          <StdinPanel
+            stdin={stdin}
+            onChangeStdin={setStdin}
+            isOpen={isStdinOpen}
+            onToggleOpen={() => setIsStdinOpen(!isStdinOpen)}
           />
 
-          {/* Console Output Drawer */}
+          {/* Terminal / Output Console */}
           <TerminalPanel
-            logs={logs}
-            onClearLogs={() => setLogs([])}
-            onRunCode={handleRunCode}
+            executionResult={executionResult}
             isRunning={isRunning}
+            onRunCode={handleRunCode}
+            onClearOutput={() => setExecutionResult(null)}
           />
 
-          {/* Status Bar */}
+          {/* Bottom Editor Status Bar */}
           <div className="editor-status-bar font-code">
-            <div className="status-left">
+            <div className="status-bar-left">
+              <span className="status-indicator-dot"></span>
+              <span>Language: {selectedLanguage.name}</span>
+              <span className="bar-separator">|</span>
+              <span>Judge0 ID: {selectedLanguage.id}</span>
+              <span className="bar-separator">|</span>
               <span>Ln {cursorStats.line}, Col {cursorStats.col}</span>
-              <span className="status-divider">|</span>
-              <span>Spaces: 2</span>
-              <span className="status-divider">|</span>
-              <span>UTF-8</span>
             </div>
 
-            <div className="status-right">
-              <span className="status-lang">
-                {activeFile.endsWith('.jsx') ? 'JavaScript (JSX)' : activeFile.endsWith('.css') ? 'CSS3' : 'JavaScript'}
-              </span>
-              <span className="status-divider">|</span>
-              <span className="status-ready text-emerald">
-                <CheckCircle2 size={12} /> Ready
-              </span>
+            <div className="status-bar-right">
+              <span className="kbd-shortcut-hint">Press <kbd>Ctrl+Enter</kbd> to Run</span>
+              <span className="bar-separator">|</span>
+              <span>UTF-8</span>
+              <span className="bar-separator">|</span>
+              <span>Spaces: 2</span>
             </div>
           </div>
         </div>
@@ -439,61 +384,224 @@ export const WorkspacePreview = () => {
 
       <style>{`
         .workspace-container {
-          width: 100%;
-          height: calc(100vh - 67px);
-          padding: 12px 16px 16px 16px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          box-sizing: border-box;
+          height: calc(100vh - 65px);
+          width: 100vw;
+          background: #0a0c10;
+          color: #f8fafc;
           overflow: hidden;
+          position: relative;
         }
         .workspace-header {
-          padding: 10px 20px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 12px;
-          border-radius: 16px;
+          padding: 8px 18px;
+          background: rgba(13, 16, 23, 0.98);
+          border-bottom: 1px solid var(--border-subtle);
+          z-index: 20;
+          height: 52px;
+          box-sizing: border-box;
         }
         .header-left, .header-right {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 10px;
         }
         .room-badge {
           display: flex;
           align-items: center;
           gap: 8px;
-          background: rgba(99, 102, 241, 0.15);
-          border: 1px solid rgba(99, 102, 241, 0.3);
-          padding: 6px 14px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 5px 12px;
           border-radius: 20px;
         }
         .live-indicator {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #10b981;
-          box-shadow: 0 0 10px #10b981;
+          background: var(--accent-emerald);
+          box-shadow: 0 0 10px var(--accent-emerald);
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0% { transform: scale(0.95); opacity: 0.8; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(0.95); opacity: 0.8; }
         }
         .room-name {
-          font-weight: 700;
-          font-size: 0.88rem;
+          font-size: 0.82rem;
+          font-weight: 600;
           color: #ffffff;
+        }
+        .language-selector-wrapper {
+          position: relative;
+        }
+        .btn-language-selector {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #ffffff;
+          padding: 5px 12px;
+          border-radius: 8px;
+          font-size: 0.8rem;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s;
+        }
+        .btn-language-selector:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: var(--accent-indigo);
+        }
+        .lang-color-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .chevron-icon {
+          transition: transform 0.2s ease;
+          color: var(--text-muted);
+        }
+        .chevron-icon.open {
+          transform: rotate(180deg);
+        }
+        .language-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          width: 240px;
+          background: #11141d;
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          border-radius: 10px;
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+          z-index: 100;
+          padding: 6px;
+          backdrop-filter: blur(12px);
+        }
+        .dropdown-label {
+          font-size: 0.68rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          padding: 6px 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          margin-bottom: 4px;
+        }
+        .language-menu-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 7px 10px;
+          border-radius: 6px;
+          font-size: 0.82rem;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .language-menu-item:hover {
+          background: rgba(99, 102, 241, 0.15);
+          color: #ffffff;
+        }
+        .language-menu-item.active {
+          background: rgba(99, 102, 241, 0.25);
+          color: #ffffff;
+          font-weight: 600;
+        }
+        .lang-item-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .lang-id-badge {
+          font-size: 0.68rem;
+          color: var(--text-muted);
+          background: rgba(255, 255, 255, 0.05);
+          padding: 1px 6px;
+          border-radius: 4px;
         }
         .latency-badge {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.8rem;
+          gap: 5px;
+          font-size: 0.74rem;
+          color: var(--text-muted);
+          background: rgba(255, 255, 255, 0.04);
+          padding: 4px 10px;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .btn-template-switch {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           color: var(--text-secondary);
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s;
+        }
+        .btn-template-switch:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+        }
+        .btn-stdin-toggle {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: var(--text-secondary);
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s;
+        }
+        .btn-stdin-toggle:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+        }
+        .btn-stdin-toggle.active {
+          background: rgba(6, 182, 212, 0.15);
+          border-color: rgba(6, 182, 212, 0.35);
+          color: var(--accent-cyan);
+        }
+        .btn-run-main {
+          background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+          border: none;
+          color: #ffffff;
+          padding: 6px 16px;
+          border-radius: 8px;
+          font-size: 0.84rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+          transition: all 0.2s;
+        }
+        .btn-run-main:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        .btn-run-main:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         .collaborator-avatars {
           display: flex;
           align-items: center;
-          gap: 4px;
         }
         .avatar-pill {
           width: 32px;
@@ -504,245 +612,208 @@ export const WorkspacePreview = () => {
           justify-content: center;
           font-size: 0.75rem;
           font-weight: 700;
+        }
+        .avatar-you {
+          background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
           color: #ffffff;
-          border: 2px solid var(--bg-primary);
+          border: 2px solid rgba(255, 255, 255, 0.15);
         }
-        .avatar-1 { background: #ec4899; }
-        .avatar-2 { background: #a855f7; }
-        .avatar-you { background: #6366f1; overflow: hidden; }
-        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-        .collaborator-count {
-          font-size: 0.75rem;
-          color: var(--text-muted);
-          margin-left: 4px;
-        }
-        .sidebar-tabs {
+        .workspace-main-content {
           display: flex;
-          background: rgba(15, 18, 26, 0.8);
-          border: 1px solid var(--border-subtle);
-          border-radius: 10px;
-          padding: 3px;
-          gap: 2px;
+          flex: 1;
+          height: calc(100% - 52px);
+          overflow: hidden;
+        }
+        .workspace-sidebar {
+          display: flex;
+          background: #0d1017;
+          border-right: 1px solid var(--border-subtle);
+          z-index: 15;
+        }
+        .sidebar-icons {
+          width: 48px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 0;
+          gap: 12px;
+          border-right: 1px solid rgba(255, 255, 255, 0.05);
         }
         .sidebar-tab-btn {
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
           background: transparent;
           border: none;
-          color: var(--text-secondary);
-          padding: 6px 12px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          border-radius: 8px;
+          color: var(--text-muted);
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
+          justify-content: center;
+          transition: all 0.2s;
         }
         .sidebar-tab-btn:hover {
           color: var(--text-primary);
+          background: rgba(255, 255, 255, 0.06);
         }
         .sidebar-tab-btn.active {
-          background: rgba(99, 102, 241, 0.25);
-          color: #ffffff;
-          border: 1px solid rgba(99, 102, 241, 0.4);
-        }
-        .share-btn { padding: 8px 16px; font-size: 0.85rem; }
-        .logout-btn { padding: 8px 16px; font-size: 0.85rem; }
-
-        /* Main IDE Grid */
-        .ide-layout-grid {
-          display: grid;
-          grid-template-columns: 240px 1fr;
-          overflow: hidden;
-          flex: 1;
-          height: 100%;
-          border-radius: 16px;
-        }
-        @media (max-width: 860px) {
-          .ide-layout-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        .ide-sidebar {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          overflow: hidden;
-        }
-        .sidebar-profile-card, .sidebar-api-card {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-        .user-profile-header {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-        }
-        .user-avatar-lg {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          background: var(--gradient-brand);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: #ffffff;
-          overflow: hidden;
-        }
-        .user-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
-        .user-name { font-size: 1rem; font-weight: 700; color: #ffffff; }
-        .user-email { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; }
-        .user-badge {
-          font-size: 0.7rem;
           color: var(--accent-cyan);
-          background: rgba(6, 182, 212, 0.12);
-          padding: 3px 8px;
-          border-radius: 6px;
-          width: fit-content;
+          background: rgba(6, 182, 212, 0.15);
         }
-        .card-title-row {
+        .sidebar-drawer-panel {
+          width: 250px;
+          background: #11141d;
+          border-right: 1px solid var(--border-subtle);
           display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #ffffff;
-        }
-        .card-desc { font-size: 0.82rem; color: var(--text-secondary); }
-        .test-api-btn { width: 100%; font-size: 0.85rem; padding: 8px; }
-        .api-response-box {
-          padding: 10px;
-          background: rgba(10, 12, 16, 0.85);
-          border: 1px solid var(--border-subtle);
-          border-radius: 8px;
-          font-size: 0.75rem;
-          color: var(--accent-emerald);
-          max-height: 180px;
+          flex-direction: column;
           overflow-y: auto;
         }
-
-        /* IDE Main Window */
-        .ide-main-window {
+        .drawer-content {
+          padding: 16px;
+        }
+        .drawer-header {
+          margin-bottom: 8px;
+        }
+        .drawer-title {
+          font-size: 0.8rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          color: var(--text-secondary);
+        }
+        .drawer-desc {
+          font-size: 0.78rem;
+          color: var(--text-muted);
+          line-height: 1.4;
+          margin-bottom: 12px;
+        }
+        .template-cards-list {
           display: flex;
           flex-direction: column;
-          background: rgba(10, 12, 16, 0.95);
-          overflow: hidden;
-          flex: 1;
-          height: 100%;
+          gap: 8px;
         }
-        .editor-tabs-bar {
-          background: rgba(15, 18, 26, 0.95);
-          border-bottom: 1px solid var(--border-subtle);
-          padding: 0 12px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          min-height: 42px;
+        .template-card {
+          padding: 10px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          cursor: pointer;
+          transition: all 0.15s;
         }
-        .tabs-scroll-area {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          overflow-x: auto;
+        .template-card:hover {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: var(--accent-indigo);
         }
-        .editor-tab {
+        .template-card.active {
+          background: rgba(99, 102, 241, 0.12);
+          border-color: rgba(99, 102, 241, 0.35);
+        }
+        .template-card-header {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 14px;
-          background: rgba(255, 255, 255, 0.02);
-          border-right: 1px solid rgba(255, 255, 255, 0.05);
-          color: var(--text-secondary);
-          font-size: 0.82rem;
-          cursor: pointer;
-          border-top: 2px solid transparent;
-          transition: background 0.15s, color 0.15s;
+          margin-bottom: 6px;
         }
-        .editor-tab:hover {
-          background: rgba(255, 255, 255, 0.06);
-          color: var(--text-primary);
+        .template-card-name {
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #f1f5f9;
         }
-        .editor-tab.active {
-          background: rgba(10, 12, 16, 0.95);
-          color: #ffffff;
-          border-top-color: var(--accent-indigo);
-          font-weight: 500;
-        }
-        .dirty-dot {
-          color: var(--accent-cyan);
-          font-size: 1.2rem;
-          line-height: 0;
-        }
-        .tab-close-btn {
-          background: transparent;
-          border: none;
-          color: var(--text-muted);
-          cursor: pointer;
-          padding: 2px;
-          border-radius: 4px;
+        .template-card-actions {
           display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 0.15s, color 0.15s;
+          gap: 6px;
         }
-        .tab-close-btn:hover {
+        .btn-mini {
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 0.7rem;
+          background: rgba(255, 255, 255, 0.08);
+          border: none;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn-mini:hover {
           background: rgba(255, 255, 255, 0.15);
           color: #ffffff;
         }
-        .tabs-actions {
-          display: flex;
-          align-items: center;
-        }
-        .btn-run-code {
-          background: rgba(16, 185, 129, 0.2);
-          border: 1px solid rgba(16, 185, 129, 0.4);
-          color: #10b981;
-          padding: 6px 14px;
-          border-radius: 8px;
+        .test-api-btn {
+          width: 100%;
+          padding: 8px;
           font-size: 0.8rem;
-          font-weight: 600;
+          border-radius: 6px;
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          color: #ffffff;
           cursor: pointer;
+          margin-bottom: 12px;
+        }
+        .test-api-btn:hover:not(:disabled) {
+          background: rgba(99, 102, 241, 0.25);
+        }
+        .api-response-box {
+          background: #0a0c10;
+          padding: 10px;
+          border-radius: 6px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 0.72rem;
+          overflow-x: auto;
+          color: var(--accent-cyan);
+          max-height: 250px;
+        }
+        .code-tag {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 1px 4px;
+          border-radius: 3px;
+        }
+        .editor-central-column {
+          flex: 1;
           display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: background 0.2s, transform 0.1s;
+          flex-direction: column;
+          height: 100%;
+          overflow: hidden;
+          background: #0a0c10;
         }
-        .btn-run-code:hover:not(:disabled) {
-          background: rgba(16, 185, 129, 0.3);
-          transform: translateY(-1px);
+        .editor-wrapper {
+          flex: 1;
+          height: 100%;
+          overflow: hidden;
+          position: relative;
         }
-
-        /* Status Bar */
         .editor-status-bar {
-          background: rgba(15, 18, 26, 0.95);
+          height: 26px;
+          background: #0d1017;
           border-top: 1px solid var(--border-subtle);
-          padding: 4px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 0.74rem;
+          padding: 0 16px;
+          font-size: 0.72rem;
           color: var(--text-muted);
           user-select: none;
         }
-        .status-left, .status-right {
+        .status-bar-left, .status-bar-right {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
-        .status-divider {
-          opacity: 0.3;
+        .status-indicator-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--accent-cyan);
         }
-        .status-ready {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-weight: 600;
+        .bar-separator {
+          color: rgba(255, 255, 255, 0.12);
         }
-        .text-cyan { color: var(--accent-cyan); }
-        .text-emerald { color: var(--accent-emerald); }
-        .text-indigo { color: var(--accent-indigo); }
+        .kbd-shortcut-hint {
+          color: var(--text-secondary);
+        }
+        .kbd-shortcut-hint kbd {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 1px 5px;
+          border-radius: 3px;
+          color: #ffffff;
+        }
       `}</style>
     </div>
   );

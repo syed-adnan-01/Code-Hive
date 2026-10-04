@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import runRoutes from './routes/runRoutes.js';
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/run', runRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -22,6 +24,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/auth/health',
       me: '/api/auth/me (Protected)',
+      run: '/api/run (Protected POST)',
+      languages: '/api/run/languages (GET)',
     },
   });
 });
