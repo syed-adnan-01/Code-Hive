@@ -190,10 +190,19 @@ export const getLiveRoomCode = async (roomId, fileId = null) => {
     // Fallback to legacy Y.Text('code') if empty or if legacy test updated 'code' directly
     const legacyCode = doc.getText('code').toString();
     let finalCode = targetText;
-    if (!finalCode && legacyCode) {
-      finalCode = legacyCode;
-    } else if (legacyCode && legacyCode !== targetText && (!fileId || fileId === 'main')) {
-      finalCode = legacyCode;
+
+    if (fileId && filesMap.has(fileId)) {
+      // User or caller targeted a specific file: its text is authoritative
+      finalCode = targetText || legacyCode;
+    } else if (!fileId) {
+      // Legacy caller didn't pass fileId (e.g. test-week13.js where test modifies legacy doc.getText('code'))
+      if (legacyCode && legacyCode !== targetText) {
+        finalCode = legacyCode;
+      } else {
+        finalCode = targetText || legacyCode;
+      }
+    } else {
+      finalCode = targetText || legacyCode;
     }
 
     // Auto-resolve language from filename extension (IDE Extension Plan Section 3)
