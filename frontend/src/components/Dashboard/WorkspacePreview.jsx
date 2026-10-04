@@ -782,7 +782,8 @@ export const WorkspacePreview = () => {
                 title="Copy Room Invitation Link"
               >
                 {isShareCopied ? <Check size={14} className="text-emerald" /> : <Share2 size={14} />}
-                <span>{isShareCopied ? 'Link Copied!' : 'Share Room'}</span>
+                <span className="btn-label-desktop">{isShareCopied ? 'Link Copied!' : 'Share Room'}</span>
+                <span className="btn-label-compact">{isShareCopied ? 'Copied' : 'Share'}</span>
               </button>
 
               <button
@@ -792,7 +793,7 @@ export const WorkspacePreview = () => {
                 title="Leave Collaboration Room"
               >
                 <LogOut size={13} />
-                <span>Leave</span>
+                <span className="btn-label-desktop">Leave</span>
               </button>
             </>
           ) : (
@@ -803,7 +804,8 @@ export const WorkspacePreview = () => {
               title="Collaborate with peers in real time"
             >
               <Users2 size={14} />
-              <span>Rooms / Collaborate</span>
+              <span className="btn-label-desktop">Rooms / Collaborate</span>
+              <span className="btn-label-compact">Rooms</span>
             </button>
           )}
 
@@ -840,7 +842,7 @@ export const WorkspacePreview = () => {
             title="Toggle Standard Input (stdin) Panel"
           >
             <Terminal size={14} />
-            <span>Stdin {stdin ? `(${stdin.length}c)` : ''}</span>
+            <span className="btn-label-desktop">Stdin {stdin ? `(${stdin.length}c)` : ''}</span>
           </button>
 
           {/* AI Suggestions Toggle Button */}
@@ -852,7 +854,7 @@ export const WorkspacePreview = () => {
               title={enableAiSuggestions ? 'AI Inline Suggestions Enabled (Tab to accept)' : 'AI Inline Suggestions Disabled'}
             >
               <Sparkles size={13} className={enableAiSuggestions ? 'text-amber animate-pulse' : 'text-slate'} />
-              <span>AI {enableAiSuggestions ? 'ON' : 'OFF'}</span>
+              <span className="btn-label-desktop">AI {enableAiSuggestions ? 'ON' : 'OFF'}</span>
             </button>
           )}
 
@@ -865,7 +867,7 @@ export const WorkspacePreview = () => {
               title="Open Room Voice & Video Call (WebRTC mesh up to 4 participants)"
             >
               <Video size={13} className={isCallPanelOpen ? 'text-emerald animate-pulse' : 'text-slate'} />
-              <span>Call</span>
+              <span className="btn-label-desktop">Call</span>
             </button>
           )}
 
@@ -877,7 +879,8 @@ export const WorkspacePreview = () => {
             title={isReadOnly ? 'Viewers cannot execute code' : 'Run Code via Judge0 API (Ctrl + Enter)'}
           >
             <Play size={14} className="fill-current" />
-            <span>{isRunning ? 'Running...' : isReadOnly ? 'View Only' : 'Run Code'}</span>
+            <span className="btn-label-desktop">{isRunning ? 'Running...' : isReadOnly ? 'View Only' : 'Run Code'}</span>
+            <span className="btn-label-compact">{isRunning ? 'Running...' : isReadOnly ? 'View' : 'Run'}</span>
           </button>
 
           {/* Collaborator Avatars */}
@@ -1435,11 +1438,11 @@ export const WorkspacePreview = () => {
           <div className="editor-status-bar font-code">
             <div className="status-bar-left">
               <span className={`status-indicator-dot ${collabStatus === 'connected' ? 'connected' : ''}`}></span>
-              <span>{currentRoom ? `Room: ${currentRoom.id} (${userRole})` : 'Solo Mode'}</span>
+              <span className="status-room-text">{currentRoom ? `Room: ${currentRoom.id} (${userRole})` : 'Solo Mode'}</span>
               <span className="bar-separator">|</span>
-              <span>Language: {selectedLanguage.name}</span>
+              <span className="status-lang-text">{selectedLanguage.name}</span>
               <span className="bar-separator">|</span>
-              <span>Ln {cursorStats.line}, Col {cursorStats.col}</span>
+              <span className="status-cursor-text">Ln {cursorStats.line}, Col {cursorStats.col}</span>
             </div>
 
             <div className="status-bar-right">
@@ -1447,9 +1450,9 @@ export const WorkspacePreview = () => {
                 {isReadOnly ? 'Viewer Mode' : <>Press <kbd>Ctrl+Enter</kbd> to Run</>}
               </span>
               <span className="bar-separator">|</span>
-              <span>Yjs CRDT</span>
+              <span className="status-yjs-hint">Yjs CRDT</span>
               <span className="bar-separator">|</span>
-              <span>UTF-8</span>
+              <span className="status-encoding-hint">UTF-8</span>
             </div>
           </div>
         </div>
@@ -1494,8 +1497,9 @@ export const WorkspacePreview = () => {
         .workspace-container {
           display: flex;
           flex-direction: column;
-          height: calc(100vh - 65px);
-          width: 100vw;
+          flex: 1;
+          height: 100%;
+          width: 100%;
           background: #f8fafc;
           color: #0f172a;
           overflow: hidden;
@@ -1505,7 +1509,7 @@ export const WorkspacePreview = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 18px;
+          padding: 6px clamp(8px, 1.2vw, 18px);
           background: #ffffff;
           border-bottom: 1px solid #e2e8f0;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -1513,11 +1517,20 @@ export const WorkspacePreview = () => {
           z-index: 10 !important;
           height: 52px;
           box-sizing: border-box;
+          min-width: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none;
+        }
+        .workspace-header::-webkit-scrollbar {
+          display: none;
         }
         .header-left, .header-right {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: clamp(5px, 0.8vw, 10px);
+          flex-shrink: 0;
+          min-width: 0;
         }
         .room-badge {
           display: flex;
@@ -2779,6 +2792,168 @@ export const WorkspacePreview = () => {
           background: #1e293b;
           border-color: #334155;
           color: #cbd5e1;
+        }
+
+        /* ── Responsive Adaptations for Screen Resizing ── */
+        .btn-label-desktop {
+          display: inline;
+        }
+        .btn-label-compact {
+          display: none;
+        }
+
+        /* 1350px Breakpoint: Hide top template quick-switches (accessible in sidebar) */
+        @media (max-width: 1350px) {
+          .btn-template-switch {
+            display: none !important;
+          }
+        }
+
+        /* 1180px Breakpoint: Compact labels & status indicators */
+        @media (max-width: 1180px) {
+          .btn-label-desktop {
+            display: none;
+          }
+          .btn-label-compact {
+            display: inline;
+          }
+          .sync-status-indicator span {
+            display: none;
+          }
+          .room-id-tag {
+            display: none;
+          }
+          .room-name {
+            max-width: 120px;
+          }
+        }
+
+        /* 980px Breakpoint: Icon-only for secondary tools, clean spacing */
+        @media (max-width: 980px) {
+          .btn-label-compact {
+            display: none;
+          }
+          .btn-run-main .btn-label-compact {
+            display: inline;
+          }
+          .btn-stdin-toggle .btn-label-desktop,
+          .btn-ai-toggle .btn-label-desktop,
+          .btn-call-toggle .btn-label-desktop,
+          .btn-share-room .btn-label-desktop,
+          .btn-leave-room .btn-label-desktop,
+          .btn-open-rooms .btn-label-desktop {
+            display: none;
+          }
+          .btn-stdin-toggle,
+          .btn-ai-toggle,
+          .btn-call-toggle,
+          .btn-share-room,
+          .btn-leave-room,
+          .btn-open-rooms {
+            padding: 5px 10px;
+          }
+          .btn-run-main {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+          }
+          .room-name {
+            max-width: 95px;
+          }
+          .status-bar-right .kbd-shortcut-hint,
+          .status-bar-right .bar-separator:nth-of-type(2),
+          .status-bar-right .status-yjs-hint,
+          .status-bar-right .bar-separator:nth-of-type(3) {
+            display: none;
+          }
+        }
+
+        /* 768px Breakpoint: Tablet & Mobile Drawer overlay & compact editor tabs */
+        @media (max-width: 768px) {
+          .workspace-sidebar {
+            position: relative;
+          }
+          .sidebar-icons {
+            width: 44px;
+            padding: 10px 0;
+            gap: 8px;
+          }
+          .sidebar-tab-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+          }
+          .sidebar-drawer-panel {
+            position: absolute;
+            left: 44px;
+            top: 0;
+            bottom: 0;
+            width: min(290px, calc(100vw - 50px));
+            z-index: 50;
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.28);
+          }
+          .workspace-tabs-bar {
+            height: 34px;
+            padding: 0 4px;
+          }
+          .editor-tab {
+            padding: 4px 8px;
+            font-size: 0.74rem;
+          }
+          .tab-name {
+            max-width: 85px;
+          }
+          .role-pill span {
+            display: none;
+          }
+          .role-pill {
+            padding: 2px 5px;
+          }
+          .sync-status-indicator {
+            display: none;
+          }
+          .btn-language-selector {
+            padding: 4px 9px;
+            font-size: 0.75rem;
+            gap: 5px;
+          }
+          .editor-status-bar {
+            padding: 0 8px;
+            font-size: 0.7rem;
+          }
+          .status-bar-right {
+            display: none;
+          }
+          .status-room-text {
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+        }
+
+        /* 580px Breakpoint: Narrow split-screen or mobile */
+        @media (max-width: 580px) {
+          .room-name {
+            max-width: 70px;
+          }
+          .btn-language-selector .lang-name {
+            max-width: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .btn-run-main {
+            padding: 5px 10px;
+          }
+          .btn-run-main .btn-label-compact {
+            display: none;
+          }
+          .status-bar-left .status-lang-text {
+            display: none;
+          }
+          .status-bar-left .bar-separator:nth-of-type(1) {
+            display: none;
+          }
         }
       `}</style>
     </div>

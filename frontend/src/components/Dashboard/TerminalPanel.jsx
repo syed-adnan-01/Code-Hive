@@ -250,6 +250,7 @@ export const TerminalPanel = ({
           display: flex;
           flex-direction: column;
           height: 240px;
+          max-height: 40vh;
           min-height: 44px;
           transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease, border-color 0.2s ease;
           z-index: 10;
@@ -265,11 +266,18 @@ export const TerminalPanel = ({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 18px;
+          padding: 6px clamp(8px, 1.2vw, 18px);
           background: #f8fafc;
           border-bottom: 1px solid #e2e8f0;
           user-select: none;
           transition: background-color 0.2s ease, border-color 0.2s ease;
+          min-width: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none;
+        }
+        .terminal-header::-webkit-scrollbar {
+          display: none;
         }
         .terminal-panel.dark .terminal-header {
           background: #0d1017;
@@ -278,8 +286,10 @@ export const TerminalPanel = ({
         .header-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: clamp(6px, 1vw, 12px);
           cursor: pointer;
+          flex-shrink: 0;
+          min-width: 0;
         }
         .terminal-title {
           font-family: 'Outfit', sans-serif;
@@ -594,6 +604,38 @@ export const TerminalPanel = ({
         .btn-inline-ai-explain:hover:not(:disabled) {
           background: #f59e0b;
           color: white;
+        }
+
+        /* ── Responsive Adaptations for Terminal Panel ── */
+        @media (max-width: 900px) {
+          .meta-badge {
+            display: none;
+          }
+          .btn-terminal-run {
+            display: none;
+          }
+          .btn-terminal-ai-explain span {
+            display: none;
+          }
+          .btn-terminal-ai-explain {
+            padding: 5px 8px;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .terminal-title {
+            font-size: 0.74rem;
+          }
+          .status-pill span {
+            display: none;
+          }
+          .running-indicator span {
+            display: none;
+          }
+          .terminal-body {
+            padding: 10px 12px;
+            font-size: 0.8rem;
+          }
         }
       `}</style>
     </div>

@@ -48,14 +48,16 @@ export const Navbar = () => {
         {/* Right Action Items */}
         <div className="navbar-actions">
           {isDemoMode ? (
-            <div className="badge-demo">
+            <div className="badge-demo" title="Demo Mode (Offline)">
               <span className="pulse-dot-amber" />
-              <span>Demo Mode</span>
+              <span className="badge-text-full">Demo Mode</span>
+              <span className="badge-text-compact">Demo</span>
             </div>
           ) : (
-            <div className="badge-live">
+            <div className="badge-live" title="Firebase Auth Live">
               <ShieldCheck size={14} />
-              <span>Firebase Auth Live</span>
+              <span className="badge-text-full">Firebase Auth Live</span>
+              <span className="badge-text-compact">Live</span>
             </div>
           )}
 
@@ -79,7 +81,7 @@ export const Navbar = () => {
             title="Firebase Documentation"
           >
             <HelpCircle size={16} />
-            <span>Docs</span>
+            <span className="nav-docs-text">Docs</span>
           </a>
 
           {/* User avatar + dropdown */}
@@ -533,6 +535,82 @@ export const Navbar = () => {
         .navbar-header.dark .nav-logout-item:hover {
           background: rgba(239, 68, 68, 0.15);
           color: #ef4444;
+        }
+
+        /* ── Responsive Adaptations for Screen Resizing ── */
+        .badge-text-compact {
+          display: none;
+        }
+        .badge-text-full {
+          display: inline;
+        }
+
+        @media (max-width: 900px) {
+          .brand-badge {
+            display: none;
+          }
+          .badge-text-full {
+            display: none;
+          }
+          .badge-text-compact {
+            display: inline;
+          }
+          .theme-toggle-text {
+            display: none;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .navbar-header {
+            height: 56px;
+            padding: 0 12px;
+          }
+          .navbar-actions {
+            gap: 6px;
+          }
+          .badge-live, .badge-demo {
+            padding: 4px 8px;
+            font-size: 0.72rem;
+          }
+          .badge-text-compact {
+            display: none;
+          }
+          .nav-docs-text {
+            display: none;
+          }
+          .nav-docs-link {
+            padding: 5px 8px;
+          }
+          .nav-theme-toggle-btn {
+            padding: 5px 8px;
+          }
+          .nav-user-btn {
+            padding: 3px 8px 3px 4px;
+            gap: 5px;
+          }
+          .nav-display-name {
+            max-width: 75px;
+          }
+        }
+
+        @media (max-width: 580px) {
+          .nav-display-name {
+            display: none;
+          }
+          .nav-docs-link {
+            display: none;
+          }
+          .brand-name {
+            font-size: 1.15rem;
+          }
+          .logo-icon-hex {
+            width: 30px;
+            height: 30px;
+          }
+          .logo-icon-hex svg {
+            width: 18px;
+            height: 18px;
+          }
         }
       `}</style>
     </header>

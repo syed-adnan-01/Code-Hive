@@ -209,10 +209,12 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
         .room-modal-card {
           width: 92%;
           max-width: 520px;
+          max-height: 90vh;
+          overflow-y: auto;
           background: #ffffff;
           border: 1px solid #e2e8f0;
           border-radius: 24px;
-          padding: 28px;
+          padding: clamp(16px, 3vw, 28px);
           box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
         }
         .room-modal-header {

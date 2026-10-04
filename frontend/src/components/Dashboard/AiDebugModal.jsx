@@ -164,12 +164,13 @@ export const AiDebugModal = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 24px;
+          padding: clamp(8px, 2vw, 24px);
         }
         .ai-modal-card {
           width: 100%;
           max-width: 980px;
-          height: 88vh;
+          height: min(88vh, 850px);
+          max-height: 96vh;
           background: #ffffff;
           border-radius: 16px;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);

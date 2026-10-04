@@ -629,7 +629,8 @@ export const CallPanel = ({
           position: fixed;
           bottom: 24px;
           right: 24px;
-          width: 520px;
+          width: min(520px, calc(100vw - 24px));
+          max-height: calc(100vh - 48px);
           background: #ffffff;
           border: 1.5px solid #e2e8f0;
           border-radius: 18px;
@@ -895,6 +896,21 @@ export const CallPanel = ({
         .btn-join-call:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+        }
+
+        @media (max-width: 600px) {
+          .codehive-call-container {
+            bottom: 12px;
+            right: 12px;
+            width: calc(100vw - 24px);
+          }
+          .call-tiles-grid {
+            grid-template-columns: 1fr;
+            min-height: 180px;
+          }
+          .call-tile {
+            height: 110px;
+          }
         }
       `}</style>
     </div>
