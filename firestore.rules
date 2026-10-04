@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. Users collection:
+    // Clients can read profiles and edit their own profile fields.
+    // Roles & administrative privileges come strictly from custom claims, never document fields.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // 2. Submissions collection:
+    // Written exclusively by backend server via Firebase Admin SDK.
+    // Authenticated users can read only their own execution history.
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow write: if false; // Clients cannot forge submission results or execution metrics
+    }
+
+    // 3. Rooms collection:
+    // Managed and written exclusively by backend server via Firebase Admin SDK.
+    // Clients access rooms through REST API (which issues single-use tickets)
+    // and live synchronization through Hocuspocus CRDT server.
+    match /rooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Prevents client-side state corruption, snapshot forgery, or role tampering
+    }
+
+    // 4. Shares collection:
+    // Share links are written by backend server with unguessable random IDs.
+    match /shares/{shareId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 5. Languages configuration:
+    // Fixed or server-managed supported compiler runtimes
+    match /languages/{languageId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Default deny for all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

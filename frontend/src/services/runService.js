@@ -2,7 +2,7 @@
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-export const runCodeAPI = async ({ source_code, language_id, stdin = '', idToken }) => {
+export const runCodeAPI = async ({ source_code, language_id, stdin = '', roomId, idToken }) => {
   if (!source_code || !source_code.trim()) {
     throw new Error('Cannot execute empty source code.');
   }
@@ -22,6 +22,7 @@ export const runCodeAPI = async ({ source_code, language_id, stdin = '', idToken
       source_code,
       language_id: Number(language_id),
       stdin: stdin || '',
+      roomId: roomId || undefined,
     }),
   });
 
@@ -32,6 +33,24 @@ export const runCodeAPI = async ({ source_code, language_id, stdin = '', idToken
   }
 
   return data;
+};
+
+export const fetchRunHistoryAPI = async (idToken) => {
+  const headers = {};
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
+  const response = await fetch(`${BACKEND_URL}/api/run/history`, {
+    headers,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch execution history.');
+  }
+
+  return data.history || [];
 };
 
 export const fetchSupportedLanguages = async () => {
@@ -46,3 +65,4 @@ export const fetchSupportedLanguages = async () => {
   }
   return null;
 };
+

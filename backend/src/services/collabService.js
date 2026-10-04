@@ -106,9 +106,21 @@ export const initCollabServer = (httpServer) => {
     },
   });
 
-  // Attach upgrade listener to the same HTTP server
+  // Attach upgrade listener with origin allow-list validation (Architecture Section 8)
   httpServer.on('upgrade', (request, socket, head) => {
     try {
+      const origin = request.headers.origin;
+      const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+      if (origin && allowedOriginsEnv) {
+        const allowed = allowedOriginsEnv.split(',').map((o) => o.trim());
+        if (!allowed.includes(origin)) {
+          console.warn(`[Collab Security] Rejected WebSocket upgrade from unauthorized origin: ${origin}`);
+          socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+      }
+
       crosswsAdapter.handleUpgrade(request, socket, head);
     } catch (err) {
       console.error('WebSocket upgrade error:', err);
@@ -138,6 +150,20 @@ export const getLiveRoomCode = async (roomId) => {
   } catch (err) {
     console.warn(`Could not open direct connection to room ${roomId}:`, err.message);
     return null;
+  }
+};
+
+// Broadcast run output to all room participants via Y.Map('meta') per Architecture Section 6.2 & 7
+export const broadcastRoomRunResult = async (roomId, submission) => {
+  if (!hocuspocusInstance) return;
+  try {
+    const directConn = await hocuspocusInstance.openDirectConnection(roomId);
+    const meta = directConn.document.getMap('meta');
+    meta.set('lastRunResult', submission);
+    meta.set('lastRunTimestamp', Date.now());
+    console.log(`[Collab Broadcast] Shared run output broadcast to room ${roomId}`);
+  } catch (err) {
+    console.warn(`Could not broadcast run result to room ${roomId}:`, err.message);
   }
 };
 

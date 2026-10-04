@@ -22,3 +22,36 @@ export const runLimiter = rateLimit({
     return ipKeyGenerator(req);
   },
 });
+
+// Rate limiter for room creation (30 rooms per minute per user/IP)
+export const roomLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    ip: false,
+  },
+  message: {
+    success: false,
+    error: 'Too many room creation requests. Please try again later.',
+  },
+  keyGenerator: (req) => req.user?.uid || ipKeyGenerator(req),
+});
+
+// Rate limiter for ticket generation (60 per minute per user/IP)
+export const ticketLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    ip: false,
+  },
+  message: {
+    success: false,
+    error: 'Too many ticket requests. Please try again later.',
+  },
+  keyGenerator: (req) => req.user?.uid || ipKeyGenerator(req),
+});
+

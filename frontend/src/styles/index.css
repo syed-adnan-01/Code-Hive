@@ -365,3 +365,39 @@ body {
     transform: scale(1);
   }
 }
+
+/* Yjs y-monaco Remote Cursors & Selection Styling (Architecture Section 7) */
+.yRemoteSelection {
+  background-color: rgba(99, 102, 241, 0.28);
+  border-radius: 2px;
+}
+
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: 2px solid;
+  border-color: inherit;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.yRemoteSelectionHead::after {
+  content: ' ';
+  position: absolute;
+  top: -1.35em;
+  left: -2px;
+  font-size: 10px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-weight: 600;
+  line-height: normal;
+  user-select: none;
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  background-color: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 20;
+}
+

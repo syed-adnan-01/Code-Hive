@@ -13,11 +13,27 @@ export const verifyFirebaseToken = async (req, res, next) => {
   const idToken = authHeader.split('Bearer ')[1];
 
   if (!isFirebaseAdminInitialized) {
-    // Demo Mode token fallback
+    // Demo Mode token fallback: supports distinct demo users (e.g. demo-alice-token, demo-charlie-token)
+    const tokenClean = idToken.trim();
+    let uid = 'demo-user-uid';
+    let name = 'Demo Hive Developer';
+    let email = 'demo.developer@codehive.dev';
+
+    if (tokenClean.startsWith('demo-')) {
+      const match = tokenClean.match(/^demo-([a-zA-Z0-9_-]+?)(?:-token)?$/);
+      if (match && match[1] && match[1] !== 'bearer' && match[1] !== 'user') {
+        const username = match[1];
+        uid = `demo-${username}-uid`;
+        name = username.charAt(0).toUpperCase() + username.slice(1);
+        email = `${username}@codehive.dev`;
+      }
+    }
+
     req.user = {
-      uid: 'demo-user-uid',
-      email: 'demo.developer@codehive.dev',
-      name: 'Demo Hive Developer',
+      uid,
+      email,
+      name,
+      displayName: name,
       isDemoUser: true,
     };
     return next();

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Keyboard, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
-export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen }) => {
+export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadOnly = false }) => {
   const handleInsertSample = () => {
+    if (isReadOnly) return;
     onChangeStdin('5\n10 20 30 40 50\nTest User Input');
   };
 
@@ -16,26 +17,30 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen }) => {
         </div>
 
         <div className="stdin-header-actions" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className="btn-stdin-tool"
-            onClick={handleInsertSample}
-            title="Insert Sample Stdin"
-          >
-            <Sparkles size={12} className="text-amber" />
-            <span>Sample Input</span>
-          </button>
+          {!isReadOnly && (
+            <>
+              <button
+                type="button"
+                className="btn-stdin-tool"
+                onClick={handleInsertSample}
+                title="Insert Sample Stdin"
+              >
+                <Sparkles size={12} className="text-amber" />
+                <span>Sample Input</span>
+              </button>
 
-          {stdin && (
-            <button
-              type="button"
-              className="btn-stdin-tool"
-              onClick={() => onChangeStdin('')}
-              title="Clear Stdin"
-            >
-              <Trash2 size={12} />
-              <span>Clear</span>
-            </button>
+              {stdin && (
+                <button
+                  type="button"
+                  className="btn-stdin-tool"
+                  onClick={() => onChangeStdin('')}
+                  title="Clear Stdin"
+                >
+                  <Trash2 size={12} />
+                  <span>Clear</span>
+                </button>
+              )}
+            </>
           )}
 
           <button
@@ -53,9 +58,10 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen }) => {
         <div className="stdin-body">
           <textarea
             className="stdin-textarea font-code"
-            placeholder="Enter standard input (stdin) for your program here (e.g. test cases, numbers, arguments)..."
+            placeholder={isReadOnly ? "Standard input is read-only for viewers." : "Enter standard input (stdin) for your program here (e.g. test cases, numbers, arguments)..."}
             value={stdin}
-            onChange={(e) => onChangeStdin(e.target.value)}
+            onChange={(e) => !isReadOnly && onChangeStdin(e.target.value)}
+            disabled={isReadOnly}
             spellCheck={false}
           />
         </div>

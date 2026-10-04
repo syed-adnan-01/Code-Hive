@@ -1,6 +1,8 @@
 import { executeJudge0Code } from '../services/judge0Service.js';
 import { SUPPORTED_LANGUAGES, getLanguageById } from '../config/languages.js';
-import { getLiveRoomCode } from '../services/collabService.js';
+import { getLiveRoomCode, broadcastRoomRunResult } from '../services/collabService.js';
+import { resolveUserRole } from '../services/roomService.js';
+import { saveSubmission, getUserSubmissions } from '../services/submissionService.js';
 
 const MAX_CODE_BYTES = 100 * 1024; // 100 KB code size cap per Architecture Section 5 & 8
 const MAX_STDIN_BYTES = 10 * 1024; // 10 KB stdin cap
@@ -8,9 +10,18 @@ const MAX_STDIN_BYTES = 10 * 1024; // 10 KB stdin cap
 export const runCode = async (req, res) => {
   try {
     let { source_code, language_id, stdin, roomId } = req.body;
+    const uid = req.user?.uid || 'demo-user';
 
-    // If roomId is provided, read live source code from server's room document (Architecture Section 6.2)
+    // If roomId is provided, check role and read live code (Architecture Section 6.2 & 7)
     if (roomId) {
+      const userRole = await resolveUserRole(roomId, uid);
+      if (userRole === 'viewer') {
+        return res.status(403).json({
+          success: false,
+          error: 'Viewers have read-only access and cannot execute code in this room.',
+        });
+      }
+
       const roomLive = await getLiveRoomCode(roomId);
       if (roomLive && roomLive.code) {
         source_code = roomLive.code;
@@ -69,13 +80,35 @@ export const runCode = async (req, res) => {
       stdin: typeof stdin === 'string' ? stdin : '',
     });
 
+    const fullSubmission = {
+      language: languageConfig.name,
+      language_id: languageConfig.id,
+      ...submissionResult,
+    };
+
+    // 5. Save submission to history (Architecture Section 5: submissions collection)
+    await saveSubmission({
+      uid,
+      language: languageConfig.name,
+      language_id: languageConfig.id,
+      code: source_code,
+      stdin: stdin || '',
+      stdout: submissionResult.stdout,
+      stderr: submissionResult.stderr,
+      compile_output: submissionResult.compile_output,
+      status: submissionResult.status,
+      time: submissionResult.time,
+      roomId: roomId || null,
+    });
+
+    // 6. If inside a room, broadcast result to all collaborators (Architecture Section 6.2 & 7)
+    if (roomId) {
+      await broadcastRoomRunResult(roomId, fullSubmission);
+    }
+
     return res.status(200).json({
       success: true,
-      submission: {
-        language: languageConfig.name,
-        language_id: languageConfig.id,
-        ...submissionResult,
-      },
+      submission: fullSubmission,
     });
   } catch (error) {
     console.error('Run Controller Error:', error);
@@ -92,4 +125,21 @@ export const getLanguages = (req, res) => {
     success: true,
     languages: SUPPORTED_LANGUAGES,
   });
+};
+
+export const getHistory = async (req, res) => {
+  try {
+    const uid = req.user?.uid;
+    const history = await getUserSubmissions(uid, 25);
+    return res.status(200).json({
+      success: true,
+      history,
+    });
+  } catch (error) {
+    console.error('Get History Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch execution history.',
+    });
+  }
 };

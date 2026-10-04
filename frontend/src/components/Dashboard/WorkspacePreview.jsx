@@ -5,7 +5,7 @@ import { TerminalPanel } from './TerminalPanel';
 import { StdinPanel } from './StdinPanel';
 import { RoomModal } from './RoomModal';
 import { SUPPORTED_LANGUAGES, getLanguageById } from '../../config/languages';
-import { runCodeAPI } from '../../services/runService';
+import { runCodeAPI, fetchRunHistoryAPI } from '../../services/runService';
 import {
   createRoomAPI,
   getRoomAPI,
@@ -31,7 +31,9 @@ import {
   LogOut,
   Radio,
   Lock,
-  Globe
+  Globe,
+  History,
+  Clock
 } from 'lucide-react';
 
 export const WorkspacePreview = () => {
@@ -62,11 +64,33 @@ export const WorkspacePreview = () => {
   const [collabYText, setCollabYText] = useState(null);
   const [collabProvider, setCollabProvider] = useState(null);
 
+  // Execution history state
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // Sidebar / Drawer states
   const [activeSidebarTab, setActiveSidebarTab] = useState('');
   const [apiResponse, setApiResponse] = useState(null);
   const [loadingApi, setLoadingApi] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+
+  // Load user execution history from backend GET /api/run/history
+  const loadHistory = useCallback(async () => {
+    setActiveSidebarTab('history');
+    setLoadingHistory(true);
+    try {
+      let idToken = null;
+      if (currentUser) {
+        idToken = currentUser.isDemo ? 'demo-bearer-token' : await currentUser.getIdToken();
+      }
+      const list = await fetchRunHistoryAPI(idToken);
+      setHistoryList(list);
+    } catch (err) {
+      console.error('Failed to load execution history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [currentUser]);
 
   // Clean up collaboration session
   const leaveRoom = useCallback(() => {
@@ -136,6 +160,34 @@ export const WorkspacePreview = () => {
       setCollabYText(collab.ytext);
       setCollabProvider(collab.provider);
 
+      // Observe room metadata for shared execution output, language, and stdin (Architecture Section 6.2 & 7)
+      collab.ymeta.observe(() => {
+        const lastRun = collab.ymeta.get('lastRunResult');
+        if (lastRun) {
+          setExecutionResult(lastRun);
+        }
+        const langId = collab.ymeta.get('language_id');
+        if (langId) {
+          const l = getLanguageById(langId);
+          if (l) setSelectedLanguage(l);
+        }
+        const sharedStdin = collab.ymeta.get('stdin');
+        if (typeof sharedStdin === 'string') {
+          setStdin(sharedStdin);
+        }
+      });
+
+      // Hydrate state from current ymeta values if available
+      const existingRun = collab.ymeta.get('lastRunResult');
+      if (existingRun) setExecutionResult(existingRun);
+      const existingLang = collab.ymeta.get('language_id');
+      if (existingLang) {
+        const l = getLanguageById(existingLang);
+        if (l) setSelectedLanguage(l);
+      }
+      const existingStdin = collab.ymeta.get('stdin');
+      if (typeof existingStdin === 'string') setStdin(existingStdin);
+
       // Update URL query param so user can refresh or share easily
       const url = new URL(window.location.href);
       url.searchParams.set('room', roomId);
@@ -184,15 +236,26 @@ export const WorkspacePreview = () => {
     }
   }, [connectToRoom, currentRoom]);
 
-  // Handle switching languages
+  // Handle switching languages (synced to room meta if collaborating)
   const handleLanguageChange = (lang) => {
     setSelectedLanguage(lang);
     setIsLangDropdownOpen(false);
 
-    if (!collabYText) {
+    if (collabRef.current?.ymeta && userRole !== 'viewer') {
+      collabRef.current.ymeta.set('language_id', lang.id);
+      collabRef.current.ymeta.set('language', lang.key);
+    } else if (!collabYText) {
       setCode(lang.defaultCode);
     }
     setExecutionResult(null);
+  };
+
+  // Handle updating standard input (synced to room meta if collaborating)
+  const handleStdinChange = (newStdin) => {
+    setStdin(newStdin);
+    if (collabRef.current?.ymeta && userRole !== 'viewer') {
+      collabRef.current.ymeta.set('stdin', newStdin);
+    }
   };
 
   // Load Stdin template for the current language
@@ -201,7 +264,7 @@ export const WorkspacePreview = () => {
       if (!collabYText) {
         setCode(selectedLanguage.stdinTemplate);
       }
-      setStdin('5\n10 20 30 40 50');
+      handleStdinChange('5\n10 20 30 40 50');
       setIsStdinOpen(true);
       setExecutionResult(null);
     }
@@ -237,6 +300,10 @@ export const WorkspacePreview = () => {
 
       if (res.success && res.submission) {
         setExecutionResult(res.submission);
+        // Sync run result to Yjs room meta for instant client-side convergence
+        if (collabRef.current?.ymeta) {
+          collabRef.current.ymeta.set('lastRunResult', res.submission);
+        }
       } else {
         throw new Error(res.error || 'Execution returned unexpected response.');
       }
@@ -464,6 +531,13 @@ export const WorkspacePreview = () => {
               <FileCode size={18} />
             </button>
             <button
+              className={`sidebar-tab-btn ${activeSidebarTab === 'history' ? 'active' : ''}`}
+              onClick={() => (activeSidebarTab === 'history' ? setActiveSidebarTab('') : loadHistory())}
+              title="Execution History"
+            >
+              <History size={18} />
+            </button>
+            <button
               className={`sidebar-tab-btn ${activeSidebarTab === 'rooms' ? 'active' : ''}`}
               onClick={() => setIsRoomModalOpen(true)}
               title="Create or Join Live Rooms"
@@ -520,7 +594,7 @@ export const WorkspacePreview = () => {
                               setSelectedLanguage(lang);
                               if (lang.stdinTemplate) {
                                 if (!collabYText) setCode(lang.stdinTemplate);
-                                setStdin('5\n10 20 30 40 50');
+                                handleStdinChange('5\n10 20 30 40 50');
                                 setIsStdinOpen(true);
                               }
                             }}
@@ -531,6 +605,76 @@ export const WorkspacePreview = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {activeSidebarTab === 'history' && (
+                <div className="drawer-content">
+                  <div className="drawer-header">
+                    <span className="font-brand drawer-title">SUBMISSION HISTORY</span>
+                  </div>
+                  <p className="drawer-desc">
+                    Your recent code executions and Judge0 run metrics (Architecture Section 5):
+                  </p>
+                  <button
+                    className="btn-mini refresh-history-btn"
+                    onClick={loadHistory}
+                    disabled={loadingHistory}
+                  >
+                    {loadingHistory ? 'Refreshing...' : 'Refresh History'}
+                  </button>
+                  {loadingHistory && historyList.length === 0 ? (
+                    <div className="history-empty font-code">Loading history...</div>
+                  ) : historyList.length === 0 ? (
+                    <div className="history-empty font-code">No execution runs recorded yet. Execute code to view history.</div>
+                  ) : (
+                    <div className="history-cards-list">
+                      {historyList.map((item, idx) => {
+                        const isSuccess = item.status?.id === 3;
+                        return (
+                          <div key={item.id || idx} className="history-card">
+                            <div className="history-card-header">
+                              <span className="history-lang font-code">{item.language}</span>
+                              <span className={`history-status-badge ${isSuccess ? 'success' : 'failed'} font-code`}>
+                                {item.status?.description || 'Executed'}
+                              </span>
+                            </div>
+                            <div className="history-meta font-code">
+                              <span>⏱️ {item.time || '0.000'}s</span>
+                              <span>{item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}</span>
+                            </div>
+                            <div className="history-actions">
+                              <button
+                                type="button"
+                                className="btn-mini"
+                                onClick={() => setExecutionResult(item)}
+                                title="View this execution's output in the terminal"
+                              >
+                                View Output
+                              </button>
+                              {!isReadOnly && item.code && (
+                                <button
+                                  type="button"
+                                  className="btn-mini"
+                                  onClick={() => {
+                                    if (collabYText) {
+                                      collabYText.delete(0, collabYText.length);
+                                      collabYText.insert(0, item.code);
+                                    } else {
+                                      setCode(item.code);
+                                    }
+                                  }}
+                                  title="Restore code into editor"
+                                >
+                                  Load Code
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -588,9 +732,10 @@ export const WorkspacePreview = () => {
           {/* Standard Input Panel */}
           <StdinPanel
             stdin={stdin}
-            onChangeStdin={setStdin}
+            onChangeStdin={handleStdinChange}
             isOpen={isStdinOpen}
             onToggleOpen={() => setIsStdinOpen(!isStdinOpen)}
+            isReadOnly={isReadOnly}
           />
 
           {/* Terminal / Output Console */}
@@ -1131,6 +1276,76 @@ export const WorkspacePreview = () => {
           background: rgba(255, 255, 255, 0.1);
           padding: 1px 4px;
           border-radius: 3px;
+        }
+        .refresh-history-btn {
+          margin-bottom: 12px;
+          width: 100%;
+          padding: 6px;
+          background: rgba(99, 102, 241, 0.15);
+          border: 1px solid rgba(99, 102, 241, 0.3);
+          color: #ffffff;
+        }
+        .refresh-history-btn:hover:not(:disabled) {
+          background: rgba(99, 102, 241, 0.3);
+        }
+        .history-empty {
+          font-size: 0.76rem;
+          color: var(--text-muted);
+          padding: 12px 0;
+          text-align: center;
+          line-height: 1.4;
+        }
+        .history-cards-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .history-card {
+          padding: 10px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .history-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .history-lang {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #f1f5f9;
+        }
+        .history-status-badge {
+          font-size: 0.68rem;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-weight: 600;
+        }
+        .history-status-badge.success {
+          background: rgba(16, 185, 129, 0.15);
+          color: var(--accent-emerald);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .history-status-badge.failed {
+          background: rgba(239, 68, 68, 0.15);
+          color: #fca5a5;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .history-meta {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 0.7rem;
+          color: var(--text-muted);
+        }
+        .history-actions {
+          display: flex;
+          gap: 6px;
+          margin-top: 2px;
         }
         .editor-central-column {
           flex: 1;

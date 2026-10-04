@@ -14,7 +14,24 @@ const PORT = process.env.PORT || 5000;
 const httpServer = http.createServer(app);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
+// JSON error handler (Architecture Section 8)
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      success: false,
+      error: 'Malformed JSON payload.',
+    });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      error: 'Payload exceeds the maximum allowable server limit (1 MB).',
+    });
+  }
+  next(err);
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
