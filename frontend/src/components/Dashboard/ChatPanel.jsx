@@ -249,7 +249,22 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
             >
               {!isOwn && (
                 <div className="peer-avatar font-brand" title={msg.senderName}>
-                  {senderLetter}
+                  {msg.senderPhotoURL ? (
+                    <img
+                      src={msg.senderPhotoURL}
+                      alt={msg.senderName}
+                      className="chat-avatar-img"
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ display: msg.senderPhotoURL ? 'none' : 'flex' }}>
+                    {senderLetter}
+                  </span>
                 </div>
               )}
 
@@ -418,6 +433,13 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           justify-content: center;
           flex-shrink: 0;
           margin-top: 2px;
+          overflow: hidden;
+        }
+        .chat-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
         .message-bubble-wrapper {
           display: flex;

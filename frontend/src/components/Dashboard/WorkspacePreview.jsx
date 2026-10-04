@@ -55,6 +55,7 @@ import {
   MessageSquare,
   Video,
   PhoneCall,
+  Mail,
 } from 'lucide-react';
 
 export const WorkspacePreview = () => {
@@ -88,6 +89,7 @@ export const WorkspacePreview = () => {
   const isReadOnly = userRole === 'viewer';
   const [collabStatus, setCollabStatus] = useState('solo'); // 'solo' | 'connecting' | 'connected' | 'disconnected'
   const [activePeers, setActivePeers] = useState([]);
+  const [selectedPeer, setSelectedPeer] = useState(null);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [isShareCopied, setIsShareCopied] = useState(false);
   const [roomActionLoading, setRoomActionLoading] = useState(false);
@@ -369,6 +371,8 @@ export const WorkspacePreview = () => {
           collabRef.current.provider.setAwarenessField('user', {
             name: `${baseName} (${roleLabel})`,
             email: currentUser?.email || '',
+            photoURL: currentUser?.photoURL || null,
+            uid: currentUser?.uid || null,
             role: userRole,
             activeFile: fileId,
           });
@@ -877,24 +881,208 @@ export const WorkspacePreview = () => {
           </button>
 
           {/* Collaborator Avatars */}
-          <div className="collaborator-avatars" title="Connected Collaborators">
+          <div className="collaborator-avatars" title="Connected Collaborators (Click to view profile)">
             {activePeers.length > 0 ? (
               activePeers.map((peer, idx) => (
-                <div
+                <button
                   key={idx}
-                  className="avatar-pill font-code"
-                  style={{ backgroundColor: peer.color || '#6366f1' }}
-                  title={`${peer.name} (${peer.role || 'editor'})`}
+                  type="button"
+                  className={`avatar-pill ${selectedPeer?.email === peer.email || (selectedPeer?.name === peer.name && selectedPeer?.color === peer.color) ? 'avatar-active' : ''}`}
+                  style={{ borderColor: peer.color || '#6366f1' }}
+                  onClick={() => setSelectedPeer(selectedPeer?.email === peer.email ? null : peer)}
+                  title={`Click to view details for ${peer.name} (${peer.role || 'editor'})`}
+                  aria-label={`Collaborator ${peer.name}`}
                 >
-                  {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
-                </div>
+                  {peer.photoURL ? (
+                    <img
+                      src={peer.photoURL}
+                      alt={peer.name}
+                      className="avatar-peer-photo"
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span
+                    className="avatar-peer-fallback font-code"
+                    style={{
+                      backgroundColor: peer.color || '#6366f1',
+                      display: peer.photoURL ? 'none' : 'flex',
+                    }}
+                  >
+                    {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
+                  </span>
+                  <span className={`peer-badge-dot role-dot-${peer.role || 'editor'}`} />
+                </button>
               ))
             ) : (
-              <div className="avatar-pill avatar-you font-code" title="You">YOU</div>
+              <button
+                type="button"
+                className="avatar-pill avatar-you avatar-clickable font-code"
+                onClick={() => setSelectedPeer({
+                  name: currentUser?.displayName || 'You',
+                  email: currentUser?.email || 'Logged in user',
+                  photoURL: currentUser?.photoURL || null,
+                  role: userRole || 'owner',
+                  activeFile: activeFileId,
+                  color: '#6366f1',
+                  isSelf: true,
+                })}
+                title="You (Click to view profile)"
+              >
+                {currentUser?.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt="You"
+                    className="avatar-peer-photo"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextSibling) {
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="avatar-peer-fallback font-code"
+                  style={{
+                    backgroundColor: '#6366f1',
+                    display: currentUser?.photoURL ? 'none' : 'flex',
+                  }}
+                >
+                  YOU
+                </span>
+                <span className="peer-badge-dot role-dot-owner" />
+              </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* Clickable Collaborator Profile Card Modal */}
+      {selectedPeer && (
+        <div className="peer-popover-overlay" onClick={() => setSelectedPeer(null)}>
+          <div
+            className={`peer-popover-card ${isDark ? 'dark' : 'light'}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              borderColor: selectedPeer.color || '#6366f1',
+            }}
+          >
+            <div
+              className="peer-card-header"
+              style={{
+                background: `linear-gradient(135deg, ${selectedPeer.color || '#6366f1'}22, transparent)`,
+              }}
+            >
+              <div className="peer-card-avatar-wrap" style={{ borderColor: selectedPeer.color || '#6366f1' }}>
+                {selectedPeer.photoURL ? (
+                  <img
+                    src={selectedPeer.photoURL}
+                    alt={selectedPeer.name}
+                    className="peer-card-img"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      if (e.currentTarget.nextSibling) {
+                        e.currentTarget.nextSibling.style.display = 'flex';
+                      }
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="peer-card-initials font-brand"
+                  style={{
+                    backgroundColor: selectedPeer.color || '#6366f1',
+                    display: selectedPeer.photoURL ? 'none' : 'flex',
+                  }}
+                >
+                  {selectedPeer.name ? selectedPeer.name.slice(0, 2).toUpperCase() : 'PE'}
+                </div>
+                <span className={`peer-card-role-dot role-dot-${selectedPeer.role || 'editor'}`} />
+              </div>
+
+              <div className="peer-card-titles">
+                <div className="peer-card-name-row">
+                  <h4 className="peer-card-name font-brand">{selectedPeer.name || 'Collaborator'}</h4>
+                  <span className={`role-pill role-${selectedPeer.role || 'editor'}`}>
+                    {selectedPeer.role === 'viewer' ? <Lock size={11} /> : <Globe size={11} />}
+                    <span>{(selectedPeer.role || 'editor').toUpperCase()}</span>
+                  </span>
+                </div>
+                <div className="peer-card-email font-code">
+                  <Mail size={12} className="peer-email-icon" />
+                  <span>{selectedPeer.email || 'No email provided'}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="peer-card-close"
+                onClick={() => setSelectedPeer(null)}
+                aria-label="Close peer details"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="peer-card-body font-brand">
+              <div className="peer-card-meta-grid">
+                <div className="peer-meta-item">
+                  <span className="peer-meta-label">Session Status</span>
+                  <div className="peer-status-val">
+                    <span className="peer-online-pulse" />
+                    <span>Live in Hive Session</span>
+                  </div>
+                </div>
+
+                <div className="peer-meta-item">
+                  <span className="peer-meta-label">Active Document</span>
+                  <span className="peer-file-name font-code">
+                    📄 {files[selectedPeer.activeFile]?.name || selectedPeer.activeFile || 'main.js'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="peer-card-actions">
+                {selectedPeer.activeFile && files[selectedPeer.activeFile] && (
+                  <button
+                    type="button"
+                    className="btn-peer-action btn-peer-jump font-brand"
+                    onClick={() => {
+                      handleSelectFile(selectedPeer.activeFile);
+                      setSelectedPeer(null);
+                    }}
+                  >
+                    <FileCode size={14} />
+                    <span>Switch to Their File ({files[selectedPeer.activeFile]?.name || selectedPeer.activeFile})</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="btn-peer-action btn-peer-chat font-brand"
+                  onClick={() => {
+                    setActiveSidebarTab('chat');
+                    setSelectedPeer(null);
+                  }}
+                >
+                  <MessageSquare size={14} />
+                  <span>Open Room Chat</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Layout */}
       <div className="workspace-main-content">
@@ -1718,7 +1906,7 @@ export const WorkspacePreview = () => {
         .collaborator-avatars {
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
         }
         .avatar-pill {
           width: 32px;
@@ -1727,16 +1915,283 @@ export const WorkspacePreview = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
+          padding: 0;
+          background: transparent;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+          cursor: pointer;
+          transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: visible;
+        }
+        .avatar-pill:hover,
+        .avatar-pill.avatar-active {
+          transform: translateY(-2px) scale(1.1);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+          z-index: 10;
+        }
+        .avatar-peer-photo {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+        }
+        .avatar-peer-fallback {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           font-size: 0.74rem;
           font-weight: 800;
           font-family: 'Outfit', sans-serif;
           color: #ffffff;
-          border: 2px solid #ffffff;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
         .avatar-you {
           background: linear-gradient(135deg, #6366f1, #a855f7);
           box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+        .peer-badge-dot {
+          position: absolute;
+          bottom: -1px;
+          right: -1px;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          border: 2px solid #ffffff;
+        }
+        .role-dot-owner {
+          background: #6366f1;
+        }
+        .role-dot-editor {
+          background: #10b981;
+        }
+        .role-dot-viewer {
+          background: #f59e0b;
+        }
+
+        /* Clickable Collaborator Profile Card Popover */
+        .peer-popover-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 23, 42, 0.45);
+          backdrop-filter: blur(4px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: peerFadeIn 0.15s ease-out;
+        }
+        @keyframes peerFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .peer-popover-card {
+          width: 90%;
+          max-width: 380px;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+          border: 1.5px solid;
+          overflow: hidden;
+          animation: peerPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes peerPopIn {
+          from { transform: scale(0.94) translateY(8px); opacity: 0; }
+          to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .peer-popover-card.light {
+          background: #ffffff;
+          color: #0f172a;
+        }
+        .peer-popover-card.dark {
+          background: #1e1e2e;
+          color: #f8fafc;
+        }
+        .peer-card-header {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 18px 20px;
+          position: relative;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+        .peer-card-avatar-wrap {
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          position: relative;
+          border: 2.5px solid;
+          flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        }
+        .peer-card-img {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+        }
+        .peer-card-initials {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #ffffff;
+        }
+        .peer-card-role-dot {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 13px;
+          height: 13px;
+          border-radius: 50%;
+          border: 2.5px solid #ffffff;
+        }
+        .peer-card-titles {
+          flex: 1;
+          min-width: 0;
+        }
+        .peer-card-name-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin-bottom: 4px;
+        }
+        .peer-card-name {
+          font-size: 1.05rem;
+          font-weight: 700;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .peer-card-email {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.76rem;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .peer-card-close {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          background: rgba(148, 163, 184, 0.12);
+          border: none;
+          color: inherit;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: background 0.15s;
+        }
+        .peer-card-close:hover {
+          background: rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+        }
+        .peer-card-body {
+          padding: 18px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .peer-card-meta-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 10px;
+          background: rgba(148, 163, 184, 0.08);
+        }
+        .peer-meta-item {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .peer-meta-label {
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .peer-status-val {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #10b981;
+        }
+        .peer-online-pulse {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+          animation: peerPulse 1.8s infinite;
+        }
+        @keyframes peerPulse {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .peer-file-name {
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #6366f1;
+        }
+        .peer-card-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .btn-peer-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 9px 14px;
+          border-radius: 9px;
+          font-size: 0.84rem;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          transition: all 0.16s ease;
+        }
+        .btn-peer-jump {
+          background: linear-gradient(135deg, #6366f1, #4f46e5);
+          color: #ffffff;
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+        }
+        .btn-peer-jump:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        .btn-peer-chat {
+          background: rgba(148, 163, 184, 0.12);
+          color: inherit;
+        }
+        .btn-peer-chat:hover {
+          background: rgba(148, 163, 184, 0.22);
         }
         .workspace-main-content {
           display: flex;

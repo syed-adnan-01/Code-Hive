@@ -14,7 +14,7 @@ export const sanitizeChatMessage = (text) => {
 };
 
 // 1. Post a new message to a room
-export const saveAndBroadcastMessage = async ({ roomId, senderUid, senderName, text }) => {
+export const saveAndBroadcastMessage = async ({ roomId, senderUid, senderName, senderPhotoURL, text }) => {
   const cleanText = sanitizeChatMessage(text);
 
   if (!cleanText) {
@@ -37,6 +37,7 @@ export const saveAndBroadcastMessage = async ({ roomId, senderUid, senderName, t
     roomId,
     senderUid,
     senderName: senderName || 'Anonymous Bee',
+    senderPhotoURL: senderPhotoURL || null,
     text: cleanText,
     timestamp: nowIso,
   };

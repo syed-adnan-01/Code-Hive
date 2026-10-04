@@ -95,6 +95,8 @@ export const Navbar = () => {
                   src={currentUser.photoURL}
                   alt={displayName}
                   className="nav-avatar-img"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
                   onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; }}
                 />
               ) : null}
@@ -109,7 +111,20 @@ export const Navbar = () => {
               <div className="nav-dropdown">
                 {/* User info row */}
                 <div className="nav-dropdown-user">
-                  <div className="nav-dropdown-avatar">{avatarLetter}</div>
+                  <div className="nav-dropdown-avatar">
+                    {currentUser?.photoURL ? (
+                      <img
+                        src={currentUser.photoURL}
+                        alt={displayName}
+                        className="nav-dropdown-avatar-img"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      avatarLetter
+                    )}
+                  </div>
                   <div className="nav-dropdown-info">
                     <span className="nav-dropdown-name">{displayName}</span>
                     <span className="nav-dropdown-email">{currentUser?.email || 'Demo user'}</span>

@@ -157,6 +157,8 @@ export const setupHocuspocusCollab = ({
             if (!s.user) return null;
             return {
               ...s.user,
+              photoURL: s.user.photoURL || null,
+              uid: s.user.uid || null,
               activeFile: s.activeFile || s.user.activeFile || 'main',
             };
           })
@@ -179,6 +181,8 @@ export const setupHocuspocusCollab = ({
   provider.setAwarenessField('user', {
     name: defaultDisplayName,
     email: user?.email || '',
+    photoURL: user?.photoURL || null,
+    uid: user?.uid || null,
     color: peerColor,
     role: role || 'editor',
   });

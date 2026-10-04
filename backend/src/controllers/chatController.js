@@ -40,10 +40,13 @@ export const postChatMessage = async (req, res) => {
       });
     }
 
+    const senderPhotoURL = req.user?.photoURL || req.user?.picture || null;
+
     const message = await saveAndBroadcastMessage({
       roomId,
       senderUid: uid,
       senderName,
+      senderPhotoURL,
       text,
     });
 

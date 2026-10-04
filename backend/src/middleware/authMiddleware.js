@@ -65,6 +65,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
       req.user = {
         ...decodedToken,
         displayName: decodedToken.name || decodedToken.displayName || decodedToken.email?.split('@')[0],
+        photoURL: decodedToken.picture || decodedToken.photoURL || null,
       };
 
       if (await isUserDisabled(decodedToken.uid)) {
@@ -96,6 +97,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
           email: payload.email || `${uid}@codehive.dev`,
           name: displayName,
           displayName,
+          photoURL: payload.picture || payload.photoURL || null,
           isDemoUser: false,
           admin: Boolean(payload.admin),
         };
