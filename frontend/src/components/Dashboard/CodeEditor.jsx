@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { MonacoBinding } from 'y-monaco';
 import { Hexagon } from 'lucide-react';
 
 export const CodeEditor = ({
@@ -9,8 +10,11 @@ export const CodeEditor = ({
   onCursorChange,
   onRunCode,
   isReadOnly = false,
+  ytext = null,
+  provider = null,
 }) => {
   const editorRef = useRef(null);
+  const bindingRef = useRef(null);
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -57,15 +61,54 @@ export const CodeEditor = ({
         onRunCode();
       }
     });
+
+    // If Yjs collaborative document is present, bind Monaco to Y.Text
+    if (ytext && provider) {
+      if (bindingRef.current) {
+        bindingRef.current.destroy();
+      }
+      bindingRef.current = new MonacoBinding(
+        ytext,
+        editor.getModel(),
+        new Set([editor]),
+        provider.awareness
+      );
+    }
   };
+
+  // Re-bind when ytext or provider updates
+  useEffect(() => {
+    if (editorRef.current && ytext && provider) {
+      if (bindingRef.current) {
+        bindingRef.current.destroy();
+      }
+      bindingRef.current = new MonacoBinding(
+        ytext,
+        editorRef.current.getModel(),
+        new Set([editorRef.current]),
+        provider.awareness
+      );
+    }
+
+    return () => {
+      if (bindingRef.current) {
+        bindingRef.current.destroy();
+        bindingRef.current = null;
+      }
+    };
+  }, [ytext, provider]);
 
   return (
     <div className="monaco-editor-container">
       <Editor
         height="100%"
         language={language}
-        value={code}
-        onChange={(val) => onChange(val || '')}
+        value={ytext ? undefined : code}
+        onChange={(val) => {
+          if (!ytext && onChange) {
+            onChange(val || '');
+          }
+        }}
         onMount={handleEditorDidMount}
         theme="vs-dark"
         options={{

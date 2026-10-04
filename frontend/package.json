@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hocuspocus/provider": "^4.7.0",
     "@monaco-editor/react": "^4.7.0",
     "firebase": "^12.17.1",
     "lucide-react": "^1.30.0",
+    "monaco-editor": "^0.57.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "y-monaco": "^0.1.6",
+    "yjs": "^13.6.33"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

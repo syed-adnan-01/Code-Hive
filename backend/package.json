@@ -9,10 +9,15 @@
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
+    "@hocuspocus/server": "^4.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^8.7.0",
-    "firebase-admin": "^12.1.0"
+    "firebase-admin": "^12.1.0",
+    "yjs": "^13.6.33"
+  },
+  "devDependencies": {
+    "@hocuspocus/provider": "^4.7.0"
   }
 }

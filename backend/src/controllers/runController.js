@@ -1,12 +1,27 @@
 import { executeJudge0Code } from '../services/judge0Service.js';
 import { SUPPORTED_LANGUAGES, getLanguageById } from '../config/languages.js';
+import { getLiveRoomCode } from '../services/collabService.js';
 
 const MAX_CODE_BYTES = 100 * 1024; // 100 KB code size cap per Architecture Section 5 & 8
 const MAX_STDIN_BYTES = 10 * 1024; // 10 KB stdin cap
 
 export const runCode = async (req, res) => {
   try {
-    const { source_code, language_id, stdin } = req.body;
+    let { source_code, language_id, stdin, roomId } = req.body;
+
+    // If roomId is provided, read live source code from server's room document (Architecture Section 6.2)
+    if (roomId) {
+      const roomLive = await getLiveRoomCode(roomId);
+      if (roomLive && roomLive.code) {
+        source_code = roomLive.code;
+        if (!language_id && roomLive.language_id) {
+          language_id = roomLive.language_id;
+        }
+        if (!stdin && roomLive.stdin) {
+          stdin = roomLive.stdin;
+        }
+      }
+    }
 
     // 1. Validate source code
     if (!source_code || typeof source_code !== 'string') {
