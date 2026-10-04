@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Hexagon, Sparkles, ShieldCheck, Terminal, HelpCircle, LogOut, ChevronDown, User } from 'lucide-react';
+import { ShieldCheck, HelpCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export const Navbar = () => {
   const { isDemoMode, currentUser, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -27,17 +29,19 @@ export const Navbar = () => {
   const avatarLetter = displayName[0]?.toUpperCase() || 'D';
 
   return (
-    <header className="navbar-header">
+    <header className={`navbar-header ${isDark ? 'dark' : 'light'}`}>
       <div className="navbar-container">
-        {/* Brand Logo */}
+        {/* Brand Logo matching Home page */}
         <div className="brand-logo">
-          <div className="logo-icon-wrapper">
-            <Hexagon className="logo-icon" size={28} />
-            <Sparkles className="logo-sparkle" size={14} />
+          <div className="logo-icon-hex">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#a855f7" strokeWidth="1.5" />
+              <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="white" fillOpacity="0.25" />
+            </svg>
           </div>
           <div className="brand-text">
-            <span className="brand-name font-brand">Code<span className="gradient-text">Hive</span></span>
-            <span className="brand-subtext">Collaborative Workspace</span>
+            <span className="brand-name">Code<span className="brand-accent">Hive</span></span>
+            <span className="brand-badge">WORKSPACE</span>
           </div>
         </div>
 
@@ -45,24 +49,36 @@ export const Navbar = () => {
         <div className="navbar-actions">
           {isDemoMode ? (
             <div className="badge-demo">
-              <span className="pulse-dot" />
-              Demo Auth Active
+              <span className="pulse-dot-amber" />
+              <span>Demo Mode</span>
             </div>
           ) : (
             <div className="badge-live">
               <ShieldCheck size={14} />
-              Firebase Auth Live
+              <span>Firebase Auth Live</span>
             </div>
           )}
+
+          {/* Theme Switcher Toggle */}
+          <button
+            type="button"
+            className="nav-theme-toggle-btn"
+            onClick={toggleTheme}
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun size={15} className="theme-toggle-icon sun" /> : <Moon size={15} className="theme-toggle-icon moon" />}
+            <span className="theme-toggle-text">{isDark ? 'Light' : 'Dark'}</span>
+          </button>
 
           <a
             href="https://firebase.google.com/docs/auth"
             target="_blank"
             rel="noopener noreferrer"
-            className="nav-link"
+            className="nav-docs-link"
             title="Firebase Documentation"
           >
-            <HelpCircle size={18} />
+            <HelpCircle size={16} />
             <span>Docs</span>
           </a>
 
@@ -79,7 +95,7 @@ export const Navbar = () => {
                   src={currentUser.photoURL}
                   alt={displayName}
                   className="nav-avatar-img"
-                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex'; }}
                 />
               ) : null}
               <span className="nav-avatar-fallback" style={{ display: currentUser?.photoURL ? 'none' : 'flex' }}>
@@ -101,9 +117,16 @@ export const Navbar = () => {
                 </div>
                 <div className="nav-dropdown-divider" />
 
+                {/* Theme toggle option inside dropdown */}
+                <button className="nav-dropdown-item nav-theme-toggle-item" onClick={toggleTheme}>
+                  {isDark ? <Sun size={15} /> : <Moon size={15} />}
+                  <span>{isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+                </button>
+                <div className="nav-dropdown-divider" />
+
                 {/* Logout */}
                 <button className="nav-dropdown-item nav-logout-item" onClick={handleLogout}>
-                  <LogOut size={15} />
+                  <LogOut size={16} />
                   <span>Log out</span>
                 </button>
               </div>
@@ -115,11 +138,15 @@ export const Navbar = () => {
       <style>{`
         .navbar-header {
           position: relative;
-          z-index: 10;
-          padding: 12px 24px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(10, 12, 16, 0.6);
-          backdrop-filter: blur(12px);
+          z-index: 1000 !important;
+          padding: 0 24px;
+          height: 64px;
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          align-items: center;
         }
         .navbar-container {
           width: 100%;
@@ -132,81 +159,125 @@ export const Navbar = () => {
         .brand-logo {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           text-decoration: none;
+          user-select: none;
+          transition: transform 0.2s ease;
         }
-        .logo-icon-wrapper {
-          position: relative;
-          width: 42px;
-          height: 42px;
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
-          border: 1px solid rgba(168, 85, 247, 0.4);
-          border-radius: 12px;
+        .brand-logo:hover {
+          transform: scale(1.02);
+        }
+        .logo-icon-hex {
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+          border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--accent-cyan);
-          box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
-        }
-        .logo-sparkle {
-          position: absolute;
-          top: -2px;
-          right: -2px;
-          color: var(--accent-pink);
+          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
         }
         .brand-text {
           display: flex;
-          flex-direction: column;
+          align-items: baseline;
+          gap: 8px;
         }
         .brand-name {
-          font-size: 1.4rem;
+          font-family: 'Outfit', sans-serif;
+          font-size: 1.35rem;
           font-weight: 800;
-          letter-spacing: -0.02em;
-          color: #ffffff;
+          letter-spacing: -0.03em;
+          color: #111827;
         }
-        .brand-subtext {
-          font-size: 0.72rem;
-          color: var(--text-muted);
+        .brand-accent {
+          color: #6366f1;
+        }
+        .brand-badge {
+          font-family: 'Fira Code', monospace;
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: #6366f1;
+          background: #e0e7ff;
+          padding: 2px 7px;
+          border-radius: 6px;
           letter-spacing: 0.05em;
-          text-transform: uppercase;
         }
         .navbar-actions {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 14px;
         }
-        .nav-link {
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 0.88rem;
+        .badge-live {
           display: flex;
           align-items: center;
           gap: 6px;
-          transition: color 0.2s ease;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #16a34a;
+          padding: 5px 12px;
+          border-radius: 20px;
+          font-size: 0.78rem;
+          font-weight: 600;
         }
-        .nav-link:hover {
-          color: var(--accent-indigo);
+        .badge-demo {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          color: #b45309;
+          padding: 5px 12px;
+          border-radius: 20px;
+          font-size: 0.78rem;
+          font-weight: 600;
+        }
+        .pulse-dot-amber {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #f59e0b;
+          animation: pulse 1.5s infinite;
+        }
+        .nav-docs-link {
+          color: #4b5563;
+          text-decoration: none;
+          font-size: 0.86rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 50px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          transition: all 0.18s ease;
+        }
+        .nav-docs-link:hover {
+          color: #6366f1;
+          border-color: #6366f1;
         }
 
-        /* ── User menu ── */
+        /* ── User Menu & Stacking Context Fix ── */
         .nav-user-menu {
           position: relative;
+          z-index: 1001 !important;
         }
         .nav-user-btn {
           display: flex;
           align-items: center;
           gap: 8px;
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: #ffffff;
+          border: 1.5px solid #e5e7eb;
           border-radius: 50px;
-          padding: 5px 12px 5px 5px;
+          padding: 4px 14px 4px 5px;
           cursor: pointer;
-          color: #ffffff;
-          transition: background 0.2s, border-color 0.2s;
+          color: #111827;
+          transition: all 0.18s ease;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         .nav-user-btn:hover {
-          background: rgba(255,255,255,0.1);
-          border-color: rgba(99,102,241,0.5);
+          border-color: #6366f1;
+          box-shadow: 0 2px 8px rgba(99,102,241,0.12);
         }
         .nav-avatar-img {
           width: 28px;
@@ -220,8 +291,9 @@ export const Navbar = () => {
           border-radius: 50%;
           background: linear-gradient(135deg, #6366f1, #a855f7);
           color: #ffffff;
-          font-size: 0.75rem;
+          font-size: 0.78rem;
           font-weight: 700;
+          display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
@@ -229,36 +301,37 @@ export const Navbar = () => {
         .nav-display-name {
           font-size: 0.85rem;
           font-weight: 600;
-          max-width: 120px;
+          color: #111827;
+          max-width: 140px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
         .nav-chevron {
           transition: transform 0.2s ease;
-          color: var(--text-muted);
+          color: #6b7280;
           flex-shrink: 0;
         }
         .nav-chevron.open {
           transform: rotate(180deg);
         }
 
-        /* Dropdown */
+        /* Dropdown Overlay: High z-index to stay strictly on top of workspace */
         .nav-dropdown {
           position: absolute;
-          top: calc(100% + 10px);
+          top: calc(100% + 8px);
           right: 0;
-          background: #1a1d2e;
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 16px;
-          min-width: 220px;
-          box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+          background: #ffffff;
+          border: 1px solid #f1f5f9;
+          border-radius: 18px;
+          min-width: 240px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.04);
           overflow: hidden;
-          animation: dropdownIn 0.15s ease;
-          z-index: 100;
+          animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: 999999 !important;
         }
         @keyframes dropdownIn {
-          from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+          from { opacity: 0; transform: translateY(-8px) scale(0.96); }
           to   { opacity: 1; transform: translateY(0)   scale(1); }
         }
         .nav-dropdown-user {
@@ -287,24 +360,25 @@ export const Navbar = () => {
           overflow: hidden;
         }
         .nav-dropdown-name {
-          font-size: 0.88rem;
-          font-weight: 600;
-          color: #ffffff;
+          font-family: 'Outfit', sans-serif;
+          font-size: 0.92rem;
+          font-weight: 700;
+          color: #111827;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
         .nav-dropdown-email {
-          font-size: 0.75rem;
-          color: var(--text-muted);
+          font-size: 0.76rem;
+          color: #6b7280;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
         .nav-dropdown-divider {
           height: 1px;
-          background: rgba(255,255,255,0.07);
-          margin: 0 12px;
+          background: #f1f5f9;
+          margin: 0 8px;
         }
         .nav-dropdown-item {
           display: flex;
@@ -315,24 +389,135 @@ export const Navbar = () => {
           border: none;
           padding: 11px 16px;
           font-size: 0.88rem;
-          font-weight: 500;
+          font-weight: 600;
           cursor: pointer;
-          transition: background 0.15s;
+          transition: all 0.15s ease;
           text-align: left;
-          color: var(--text-secondary);
-          font-family: 'Inter', sans-serif;
-        }
-        .nav-dropdown-item:hover {
-          background: rgba(255,255,255,0.06);
-          color: #ffffff;
+          font-family: inherit;
         }
         .nav-logout-item {
-          color: #f87171;
-          margin-bottom: 4px;
+          color: #ef4444;
+          border-radius: 12px;
+          margin: 4px 6px;
+          width: calc(100% - 12px);
         }
         .nav-logout-item:hover {
-          background: rgba(248,113,113,0.1);
+          background: #fef2f2;
+          color: #dc2626;
+        }
+
+        /* ── Theme Toggle Pill Button ── */
+        .nav-theme-toggle-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          padding: 5px 12px;
+          border-radius: 50px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .nav-theme-toggle-btn:hover {
+          border-color: #6366f1;
+          color: #6366f1;
+          transform: translateY(-1px);
+        }
+        .theme-toggle-icon.sun {
+          color: #f59e0b;
+        }
+        .theme-toggle-icon.moon {
+          color: #6366f1;
+        }
+        .nav-theme-toggle-item {
+          color: #475569;
+          border-radius: 12px;
+          margin: 4px 6px;
+          width: calc(100% - 12px);
+        }
+        .nav-theme-toggle-item:hover {
+          background: #f1f5f9;
+          color: #6366f1;
+        }
+
+        /* ── Dark Mode Navbar Overrides ── */
+        .navbar-header.dark {
+          background: rgba(13, 18, 31, 0.96);
+          border-bottom-color: #1e293b;
+        }
+        .navbar-header.dark .brand-name {
+          color: #f8fafc;
+        }
+        .navbar-header.dark .logo-icon-hex {
+          background: linear-gradient(135deg, #1e1b4b, #2e1065);
+        }
+        .navbar-header.dark .nav-docs-link {
+          background: #111827;
+          border-color: #1f2937;
+          color: #cbd5e1;
+        }
+        .navbar-header.dark .nav-docs-link:hover {
+          border-color: #6366f1;
+          color: #818cf8;
+        }
+        .navbar-header.dark .nav-theme-toggle-btn {
+          background: #111827;
+          border-color: #1f2937;
+          color: #cbd5e1;
+        }
+        .navbar-header.dark .nav-theme-toggle-btn:hover {
+          border-color: #6366f1;
+          color: #f8fafc;
+        }
+        .navbar-header.dark .nav-user-btn {
+          background: #111827;
+          border-color: #1f2937;
+          color: #f1f5f9;
+        }
+        .navbar-header.dark .nav-user-btn:hover {
+          border-color: #6366f1;
+        }
+        .navbar-header.dark .nav-display-name {
+          color: #f1f5f9;
+        }
+        .navbar-header.dark .nav-chevron {
+          color: #94a3b8;
+        }
+        .navbar-header.dark .nav-dropdown {
+          background: #0d121f;
+          border-color: #1e293b;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .navbar-header.dark .nav-dropdown-name {
+          color: #f8fafc;
+        }
+        .navbar-header.dark .nav-dropdown-email {
+          color: #94a3b8;
+        }
+        .navbar-header.dark .nav-dropdown-divider {
+          background: #1e293b;
+        }
+        .navbar-header.dark .nav-dropdown-item {
+          color: #cbd5e1;
+        }
+        .navbar-header.dark .nav-dropdown-item:hover {
+          background: rgba(99, 102, 241, 0.15);
+          color: #ffffff;
+        }
+        .navbar-header.dark .nav-theme-toggle-item:hover {
+          background: rgba(99, 102, 241, 0.15);
+          color: #818cf8;
+        }
+        .navbar-header.dark .nav-logout-item {
           color: #f87171;
+        }
+        .navbar-header.dark .nav-logout-item:hover {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
         }
       `}</style>
     </header>

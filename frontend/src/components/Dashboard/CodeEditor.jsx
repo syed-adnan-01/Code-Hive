@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { MonacoBinding } from 'y-monaco';
 import { Hexagon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export const CodeEditor = ({
   code,
@@ -13,13 +14,16 @@ export const CodeEditor = ({
   ytext = null,
   provider = null,
 }) => {
+  const { isDark } = useTheme();
   const editorRef = useRef(null);
+  const monacoRef = useRef(null);
   const bindingRef = useRef(null);
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
 
-    // Define CodeHive customized dark theme for Monaco
+    // 1. Define CodeHive customized dark theme
     monaco.editor.defineTheme('codehive-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -40,10 +44,36 @@ export const CodeEditor = ({
         'editorLineNumber.activeForeground': '#06b6d4',
         'editor.selectionBackground': '#6366f133',
         'editor.inactiveSelectionBackground': '#6366f120',
+        'editorGutter.background': '#0a0c10',
       },
     });
 
-    monaco.editor.setTheme('codehive-dark');
+    // 2. Define CodeHive customized light theme
+    monaco.editor.defineTheme('codehive-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '94a3b8', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '6366f1', fontStyle: 'bold' },
+        { token: 'string', foreground: '059669' },
+        { token: 'number', foreground: 'd97706' },
+        { token: 'type', foreground: '0284c7' },
+        { token: 'function', foreground: '4f46e5' },
+      ],
+      colors: {
+        'editor.background': '#ffffff',
+        'editor.foreground': '#0f172a',
+        'editorCursor.foreground': '#6366f1',
+        'editor.lineHighlightBackground': '#f8fafc',
+        'editorLineNumber.foreground': '#94a3b8',
+        'editorLineNumber.activeForeground': '#6366f1',
+        'editor.selectionBackground': '#e0e7ff',
+        'editor.inactiveSelectionBackground': '#f1f5f9',
+        'editorGutter.background': '#ffffff',
+      },
+    });
+
+    monaco.editor.setTheme(isDark ? 'codehive-dark' : 'codehive-light');
 
     // Track cursor movements
     editor.onDidChangeCursorPosition((e) => {
@@ -76,6 +106,13 @@ export const CodeEditor = ({
     }
   };
 
+  // Switch Monaco theme on the fly when user toggles light/dark mode
+  useEffect(() => {
+    if (monacoRef.current) {
+      monacoRef.current.editor.setTheme(isDark ? 'codehive-dark' : 'codehive-light');
+    }
+  }, [isDark]);
+
   // Re-bind when ytext or provider updates
   useEffect(() => {
     if (editorRef.current && ytext && provider) {
@@ -99,7 +136,7 @@ export const CodeEditor = ({
   }, [ytext, provider]);
 
   return (
-    <div className="monaco-editor-container">
+    <div className={`monaco-editor-container ${isDark ? 'dark' : 'light'}`}>
       <Editor
         height="100%"
         language={language}
@@ -110,7 +147,7 @@ export const CodeEditor = ({
           }
         }}
         onMount={handleEditorDidMount}
-        theme="vs-dark"
+        theme={isDark ? 'codehive-dark' : 'codehive-light'}
         options={{
           readOnly: isReadOnly,
           fontSize: 14,
@@ -141,9 +178,13 @@ export const CodeEditor = ({
           flex: 1;
           height: 100%;
           width: 100%;
-          background: #0a0c10;
+          background: #ffffff;
           position: relative;
           overflow: hidden;
+          transition: background-color 0.2s ease;
+        }
+        .monaco-editor-container.dark {
+          background: #0a0c10;
         }
         .monaco-loading-spinner {
           height: 100%;
@@ -152,18 +193,22 @@ export const CodeEditor = ({
           align-items: center;
           justify-content: center;
           gap: 12px;
-          color: var(--text-secondary);
+          color: #475569;
           font-size: 0.95rem;
+          background: #ffffff;
+        }
+        .monaco-editor-container.dark .monaco-loading-spinner {
           background: #0a0c10;
+          color: #94a3b8;
         }
         .monaco-spin-icon {
-          color: var(--accent-indigo);
+          color: #6366f1;
           animation: spin 2s linear infinite;
         }
         @keyframes spin {
-          0% { transform: rotate(0deg); color: var(--accent-indigo); }
-          50% { transform: rotate(180deg); color: var(--accent-cyan); }
-          100% { transform: rotate(360deg); color: var(--accent-indigo); }
+          0%   { transform: rotate(0deg);   color: #6366f1; }
+          50%  { transform: rotate(180deg); color: #06b6d4; }
+          100% { transform: rotate(360deg); color: #6366f1; }
         }
       `}</style>
     </div>

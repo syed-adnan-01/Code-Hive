@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { SUPPORTED_LANGUAGES } from '../../config/languages';
 import { Users2, Plus, LogIn, X, Shield, Lock, Globe, Sparkles } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }) => {
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('create'); // 'create' | 'join'
   const [roomName, setRoomName] = useState('CodeHive Pair Session');
   const [selectedLanguageId, setSelectedLanguageId] = useState(63);
@@ -52,22 +54,22 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
 
   return (
     <div className="room-modal-backdrop" onClick={onClose}>
-      <div className="room-modal-card glass-card" onClick={(e) => e.stopPropagation()}>
+      <div className={`room-modal-card ${isDark ? 'dark' : 'light'}`} onClick={(e) => e.stopPropagation()}>
         <div className="room-modal-header">
-          <div className="header-icon-box purple-glow">
+          <div className="header-icon-box">
             <Users2 size={20} />
           </div>
           <div className="header-title-box">
-            <h3 className="room-modal-title font-brand">Collaboration Rooms</h3>
+            <h3 className="room-modal-title">Collaboration Rooms</h3>
             <p className="room-modal-subtitle">Pair program in real time with synchronized Monaco editing</p>
           </div>
-          <button className="btn-close-modal" onClick={onClose}>
+          <button className="btn-close-modal" onClick={onClose} aria-label="Close modal">
             <X size={18} />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="modal-tab-switcher font-brand">
+        <div className="modal-tab-switcher">
           <button
             type="button"
             className={`modal-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
@@ -132,7 +134,7 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
                     checked={linkAccess === 'editor'}
                     onChange={() => setLinkAccess('editor')}
                   />
-                  <Globe size={16} className="text-cyan" />
+                  <Globe size={18} className="access-icon-editor" />
                   <div>
                     <div className="option-title">Editor (Collaborative)</div>
                     <div className="option-desc">Anyone with link can write and run code</div>
@@ -147,7 +149,7 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
                     checked={linkAccess === 'viewer'}
                     onChange={() => setLinkAccess('viewer')}
                   />
-                  <Lock size={16} className="text-amber" />
+                  <Lock size={18} className="access-icon-viewer" />
                   <div>
                     <div className="option-title">Viewer (Read-Only)</div>
                     <div className="option-desc">Anyone with link can watch live typing without edit access</div>
@@ -191,199 +193,304 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(0, 0, 0, 0.75);
-          backdrop-filter: blur(8px);
+          background: rgba(15, 23, 42, 0.45);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
-          animation: fadeIn 0.15s ease-out;
+          z-index: 20000 !important;
+          animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.97); }
+          to   { opacity: 1; transform: scale(1); }
         }
         .room-modal-card {
-          width: 90%;
-          max-width: 500px;
-          background: #11141d;
-          border: 1px solid rgba(99, 102, 241, 0.35);
-          border-radius: 16px;
-          padding: 24px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+          width: 92%;
+          max-width: 520px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 24px;
+          padding: 28px;
+          box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
         }
         .room-modal-header {
           display: flex;
           align-items: center;
           gap: 14px;
-          margin-bottom: 18px;
+          margin-bottom: 22px;
           position: relative;
         }
         .header-icon-box {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(168, 85, 247, 0.15);
-          border: 1px solid rgba(168, 85, 247, 0.3);
-          color: var(--accent-purple);
+          background: #e0e7ff;
+          color: #6366f1;
+          flex-shrink: 0;
         }
         .header-title-box {
           flex: 1;
         }
         .room-modal-title {
-          font-size: 1.25rem;
-          color: #ffffff;
-          font-weight: 700;
+          font-family: 'Outfit', sans-serif;
+          font-size: 1.35rem;
+          color: #111827;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          margin: 0;
         }
         .room-modal-subtitle {
-          font-size: 0.82rem;
-          color: var(--text-secondary);
+          font-size: 0.84rem;
+          color: #64748b;
+          margin-top: 2px;
         }
         .btn-close-modal {
-          background: transparent;
-          border: none;
-          color: var(--text-muted);
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 6px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
-          transition: all 0.15s;
+          justify-content: center;
+          transition: all 0.15s ease;
         }
         .btn-close-modal:hover {
-          color: #ffffff;
-          background: rgba(255, 255, 255, 0.1);
+          color: #111827;
+          background: #f1f5f9;
+          transform: rotate(90deg);
         }
         .modal-tab-switcher {
           display: flex;
-          gap: 8px;
-          background: rgba(0, 0, 0, 0.4);
+          gap: 6px;
+          background: #f1f5f9;
           padding: 4px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 50px;
+          margin-bottom: 22px;
+          border: 1px solid #e2e8f0;
         }
         .modal-tab-btn {
           flex: 1;
           background: transparent;
           border: none;
-          color: var(--text-secondary);
-          padding: 8px;
-          border-radius: 6px;
-          font-size: 0.82rem;
+          color: #64748b;
+          padding: 9px 16px;
+          border-radius: 50px;
+          font-size: 0.85rem;
           font-weight: 600;
+          font-family: 'Outfit', sans-serif;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: all 0.2s;
+          transition: all 0.18s ease;
         }
         .modal-tab-btn.active {
-          background: rgba(99, 102, 241, 0.25);
-          color: #ffffff;
-          border: 1px solid rgba(99, 102, 241, 0.4);
+          background: #ffffff;
+          color: #111827;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          font-weight: 700;
         }
         .room-modal-error {
-          background: rgba(239, 68, 68, 0.12);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #fca5a5;
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 0.82rem;
-          margin-bottom: 16px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+          padding: 10px 14px;
+          border-radius: 12px;
+          font-size: 0.84rem;
+          font-weight: 500;
+          margin-bottom: 18px;
         }
         .room-form {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 18px;
         }
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 7px;
         }
         .form-label {
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: var(--text-secondary);
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #374151;
+          font-family: 'Outfit', sans-serif;
+          letter-spacing: 0.02em;
         }
         .form-input, .form-select {
-          background: rgba(10, 12, 16, 0.9);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: #ffffff;
-          padding: 9px 12px;
-          border-radius: 8px;
-          font-size: 0.86rem;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          color: #111827;
+          padding: 10px 14px;
+          border-radius: 12px;
+          font-size: 0.9rem;
           outline: none;
-          transition: border-color 0.2s;
+          transition: all 0.18s ease;
+          font-family: inherit;
         }
         .form-input:focus, .form-select:focus {
-          border-color: var(--accent-indigo);
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
         }
         .form-hint {
-          font-size: 0.72rem;
-          color: var(--text-muted);
+          font-size: 0.74rem;
+          color: #64748b;
+          margin-top: 2px;
         }
         .access-options {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
         .access-option {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 10px 14px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 12px 16px;
+          border-radius: 14px;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.18s ease;
+        }
+        .access-option:hover {
+          border-color: #cbd5e1;
+          background: #f1f5f9;
         }
         .access-option.selected {
-          background: rgba(99, 102, 241, 0.12);
-          border-color: rgba(99, 102, 241, 0.4);
+          background: #eff6ff;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 1px #6366f1;
         }
         .access-option input {
           display: none;
         }
+        .access-icon-editor {
+          color: #6366f1;
+        }
+        .access-icon-viewer {
+          color: #f59e0b;
+        }
         .option-title {
-          font-size: 0.82rem;
-          font-weight: 600;
-          color: #ffffff;
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: #111827;
+          font-family: 'Outfit', sans-serif;
         }
         .option-desc {
-          font-size: 0.74rem;
-          color: var(--text-muted);
+          font-size: 0.76rem;
+          color: #64748b;
+          margin-top: 2px;
         }
         .btn-modal-primary {
-          background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+          background: #111827;
           border: none;
           color: #ffffff;
-          padding: 11px;
-          border-radius: 8px;
-          font-size: 0.88rem;
-          font-weight: 600;
+          padding: 13px;
+          border-radius: 50px;
+          font-size: 0.92rem;
+          font-weight: 700;
+          font-family: 'Outfit', sans-serif;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-          transition: all 0.2s;
-          margin-top: 6px;
+          box-shadow: 0 4px 14px rgba(17, 24, 39, 0.18);
+          transition: all 0.2s ease;
+          margin-top: 8px;
         }
         .btn-modal-primary:hover:not(:disabled) {
+          background: #6366f1;
           transform: translateY(-1px);
-          box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
+          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
         }
         .btn-modal-primary:disabled {
           opacity: 0.6;
           cursor: not-allowed;
+          transform: none;
         }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.98); }
-          to { opacity: 1; transform: scale(1); }
+
+        /* ── Dark Mode Room Modal ── */
+        .room-modal-card.dark {
+          background: #0f172a;
+          border-color: #1e293b;
+          color: #f1f5f9;
+          box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .room-modal-card.dark .room-modal-title {
+          color: #f8fafc;
+        }
+        .room-modal-card.dark .room-modal-subtitle {
+          color: #94a3b8;
+        }
+        .room-modal-card.dark .btn-close-modal {
+          background: #1e293b;
+          border-color: #334155;
+          color: #94a3b8;
+        }
+        .room-modal-card.dark .btn-close-modal:hover {
+          color: #ffffff;
+          background: #334155;
+        }
+        .room-modal-card.dark .modal-tab-switcher {
+          background: #1e293b;
+          border-color: #334155;
+        }
+        .room-modal-card.dark .modal-tab-btn {
+          color: #94a3b8;
+        }
+        .room-modal-card.dark .modal-tab-btn.active {
+          background: #0f172a;
+          color: #818cf8;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .room-modal-card.dark .form-label {
+          color: #cbd5e1;
+        }
+        .room-modal-card.dark .form-input,
+        .room-modal-card.dark .form-select {
+          background: #1e293b;
+          border-color: #334155;
+          color: #f8fafc;
+        }
+        .room-modal-card.dark .form-input:focus,
+        .room-modal-card.dark .form-select:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+        .room-modal-card.dark .form-hint {
+          color: #94a3b8;
+        }
+        .room-modal-card.dark .access-option {
+          background: #1e293b;
+          border-color: #334155;
+        }
+        .room-modal-card.dark .access-option.selected {
+          border-color: #6366f1;
+          background: rgba(99, 102, 241, 0.15);
+        }
+        .room-modal-card.dark .option-title {
+          color: #f8fafc;
+        }
+        .room-modal-card.dark .option-desc {
+          color: #94a3b8;
+        }
+        .room-modal-card.dark .btn-modal-primary {
+          background: #6366f1;
+          color: #ffffff;
+        }
+        .room-modal-card.dark .btn-modal-primary:hover:not(:disabled) {
+          background: #4f46e5;
         }
       `}</style>
     </div>

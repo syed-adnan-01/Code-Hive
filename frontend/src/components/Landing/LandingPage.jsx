@@ -1,4 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+
+/* ─────────────────────────────────────────────
+   Intersection Observer — scroll reveal hook
+───────────────────────────────────────────── */
+const useReveal = (options = {}) => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px', ...options }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+};
+
+/* Wrapper that reveals children when scrolled into view */
+const Reveal = ({ children, dir = 'up', delay = 0, className = '', style = {} }) => {
+  const [ref, visible] = useReveal();
+  const dirClass = { up: 'rv-up', down: 'rv-down', left: 'rv-left', right: 'rv-right', scale: 'rv-scale' }[dir] || 'rv-up';
+  return (
+    <div
+      ref={ref}
+      className={`rv-base ${dirClass} ${visible ? 'rv-visible' : ''} ${className}`}
+      style={{ transitionDelay: `${delay}ms`, ...style }}
+    >
+      {children}
+    </div>
+  );
+};
 
 /* ─────────────────────────────────────────────
    Tiny SVG geometric shapes used as decorators
@@ -97,9 +133,10 @@ const FEATURES = [
 ───────────────────────────────────────────── */
 export const LandingPage = ({ onGetStarted, onLogin }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   return (
-    <div className="lp-root">
+    <div className={`lp-root ${isDark ? 'dark' : 'light'}`}>
 
       {/* ── NAVBAR ── */}
       <header className="lp-nav">
@@ -125,6 +162,15 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
 
           {/* Nav Actions */}
           <div className="lp-nav-actions">
+            <button
+              type="button"
+              className="lp-theme-btn"
+              onClick={toggleTheme}
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun size={17} className="sun-icon" /> : <Moon size={17} className="moon-icon" />}
+            </button>
             <button className="lp-btn-ghost" onClick={onLogin}>Login</button>
             <button className="lp-btn-primary" onClick={onGetStarted}>Sign Up Free</button>
           </div>
@@ -141,6 +187,14 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
             <a href="#features" onClick={() => setMobileMenuOpen(false)}>Features</a>
             <a href="#languages" onClick={() => setMobileMenuOpen(false)}>Languages</a>
             <a href="#security" onClick={() => setMobileMenuOpen(false)}>Security</a>
+            <button
+              type="button"
+              className="lp-mobile-theme-btn"
+              onClick={toggleTheme}
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+            </button>
             <button className="lp-btn-ghost" onClick={onLogin}>Login</button>
             <button className="lp-btn-primary" onClick={onGetStarted}>Sign Up Free</button>
           </div>
@@ -192,22 +246,58 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
 
         {/* Right column: geometric illustration */}
         <div className="lp-hero-visual" aria-hidden="true">
-          {/* Big background blob */}
+          {/* Big background blob — pulses softly */}
           <div className="lp-hero-blob" />
 
-          {/* Scattered shapes — inspired by Nunito/DSM/Rotation designs */}
-          <ShapeCircle color="#f97316" size={90} style={{ position: 'absolute', top: '8%', left: '12%', opacity: 0.9 }} />
-          <ShapeCircleOutline color="#6366f1" size={70} style={{ position: 'absolute', top: '5%', right: '20%' }} />
-          <ShapeCircle color="#10b981" size={55} style={{ position: 'absolute', top: '20%', right: '8%' }} />
-          <ShapeTriangle color="#f59e0b" size={64} style={{ position: 'absolute', top: '45%', left: '5%' }} />
-          <ShapeTriangle color="#6366f1" size={48} style={{ position: 'absolute', bottom: '25%', right: '12%', transform: 'rotate(180deg)' }} />
-          <ShapeRect color="#a855f7" w={110} h={52} radius={26} style={{ position: 'absolute', bottom: '35%', left: '18%' }} />
-          <ShapeHalf color="#06b6d4" size={80} style={{ position: 'absolute', bottom: '15%', left: '38%' }} />
-          <ShapeRect color="#ef4444" w={52} h={52} radius={8} style={{ position: 'absolute', top: '38%', right: '26%', transform: 'rotate(12deg)' }} />
-          <ShapeCircle color="#fbbf24" size={40} style={{ position: 'absolute', bottom: '30%', right: '30%', opacity: 0.8 }} />
+          {/* ── Animated shapes ── each has a unique float/spin class */}
+          {/* Orange circle — slow bob */}
+          <ShapeCircle color="#f97316" size={90}
+            style={{ position: 'absolute', top: '8%', left: '12%', opacity: 0.9,
+              animation: 'lp-float-a 6s ease-in-out infinite' }} />
 
-          {/* Floating code editor card */}
-          <div className="lp-code-card">
+          {/* Indigo outline circle — counter-spin */}
+          <ShapeCircleOutline color="#6366f1" size={70}
+            style={{ position: 'absolute', top: '5%', right: '20%',
+              animation: 'lp-spin-slow 12s linear infinite' }} />
+
+          {/* Green filled circle — bob up faster */}
+          <ShapeCircle color="#10b981" size={55}
+            style={{ position: 'absolute', top: '20%', right: '8%',
+              animation: 'lp-float-b 4.5s ease-in-out infinite' }} />
+
+          {/* Yellow triangle — gentle rock */}
+          <ShapeTriangle color="#f59e0b" size={64}
+            style={{ position: 'absolute', top: '45%', left: '5%',
+              animation: 'lp-rock 5s ease-in-out infinite' }} />
+
+          {/* Indigo inverted triangle — drift down-right */}
+          <ShapeTriangle color="#6366f1" size={48}
+            style={{ position: 'absolute', bottom: '25%', right: '12%',
+              transform: 'rotate(180deg)',
+              animation: 'lp-float-c 7s ease-in-out infinite' }} />
+
+          {/* Purple pill — slide float */}
+          <ShapeRect color="#a855f7" w={110} h={52} radius={26}
+            style={{ position: 'absolute', bottom: '35%', left: '18%',
+              animation: 'lp-float-a 5.5s ease-in-out infinite 0.8s' }} />
+
+          {/* Cyan half-circle — sway */}
+          <ShapeHalf color="#06b6d4" size={80}
+            style={{ position: 'absolute', bottom: '15%', left: '38%',
+              animation: 'lp-sway 6.5s ease-in-out infinite' }} />
+
+          {/* Red square — slow spin */}
+          <ShapeRect color="#ef4444" w={52} h={52} radius={8}
+            style={{ position: 'absolute', top: '38%', right: '26%',
+              animation: 'lp-spin-slow 9s linear infinite reverse' }} />
+
+          {/* Amber small circle — fast bob */}
+          <ShapeCircle color="#fbbf24" size={40}
+            style={{ position: 'absolute', bottom: '30%', right: '30%', opacity: 0.8,
+              animation: 'lp-float-b 3.8s ease-in-out infinite 1.2s' }} />
+
+          {/* Floating code editor card — gentle levitate */}
+          <div className="lp-code-card lp-card-float">
             <div className="lp-code-card-dots">
               <span style={{background:'#ef4444'}} />
               <span style={{background:'#f59e0b'}} />
@@ -221,11 +311,11 @@ const room = await hive.joinRoom({
 
 room.onCollaborator((user) => {
   console.log(\`\${user.name} joined!\`);
-});`}</pre>
+});`}<span className="lp-cursor" /></pre>
           </div>
 
-          {/* Live users pill */}
-          <div className="lp-live-pill">
+          {/* Live users pill — slides in from right */}
+          <div className="lp-live-pill lp-slide-in-right">
             <span className="lp-live-dot" />
             <span className="lp-live-avatars">
               {['#6366f1','#f97316','#10b981'].map((c, i) => (
@@ -235,9 +325,9 @@ room.onCollaborator((user) => {
             <span>3 devs coding now</span>
           </div>
 
-          {/* Run result chip */}
-          <div className="lp-run-chip">
-            <span className="lp-run-icon">▶</span>
+          {/* Run result chip — slides in from left */}
+          <div className="lp-run-chip lp-slide-in-left">
+            <span className="lp-run-icon lp-run-blink">▶</span>
             <span>Executed in 142ms · Judge0</span>
           </div>
         </div>
@@ -245,130 +335,142 @@ room.onCollaborator((user) => {
 
       {/* ── STATS BAR ── */}
       <div className="lp-stats-bar">
-        <div className="lp-stat">
-          <span className="lp-stat-num"><AnimatedCounter end={56} suffix="+" /></span>
-          <span className="lp-stat-label">Automated Tests Passing</span>
-        </div>
+        <Reveal dir="up" delay={0} style={{display:'contents'}}>
+          <div className="lp-stat lp-stat-hover">
+            <span className="lp-stat-num"><AnimatedCounter end={56} suffix="+" /></span>
+            <span className="lp-stat-label">Automated Tests Passing</span>
+          </div>
+        </Reveal>
         <div className="lp-stat-divider" />
-        <div className="lp-stat">
-          <span className="lp-stat-num"><AnimatedCounter end={7} /></span>
-          <span className="lp-stat-label">Supported Languages</span>
-        </div>
+        <Reveal dir="up" delay={80} style={{display:'contents'}}>
+          <div className="lp-stat lp-stat-hover">
+            <span className="lp-stat-num"><AnimatedCounter end={7} /></span>
+            <span className="lp-stat-label">Supported Languages</span>
+          </div>
+        </Reveal>
         <div className="lp-stat-divider" />
-        <div className="lp-stat">
-          <span className="lp-stat-num">&lt;10ms</span>
-          <span className="lp-stat-label">Sync Latency</span>
-        </div>
+        <Reveal dir="up" delay={160} style={{display:'contents'}}>
+          <div className="lp-stat lp-stat-hover">
+            <span className="lp-stat-num">&lt;10ms</span>
+            <span className="lp-stat-label">Sync Latency</span>
+          </div>
+        </Reveal>
         <div className="lp-stat-divider" />
-        <div className="lp-stat">
-          <span className="lp-stat-num">60s</span>
-          <span className="lp-stat-label">Single-Use Room Tickets</span>
-        </div>
+        <Reveal dir="up" delay={240} style={{display:'contents'}}>
+          <div className="lp-stat lp-stat-hover">
+            <span className="lp-stat-num">60s</span>
+            <span className="lp-stat-label">Single-Use Room Tickets</span>
+          </div>
+        </Reveal>
       </div>
 
       {/* ── FEATURES SECTION ── */}
       <section id="features" className="lp-section lp-features">
-        <div className="lp-section-header">
-          <div className="lp-eyebrow lp-eyebrow-dark">
-            <span className="lp-eyebrow-dot" style={{ background: '#6366f1' }} />
-            CAPABILITIES
+        <Reveal dir="up">
+          <div className="lp-section-header">
+            <div className="lp-eyebrow lp-eyebrow-dark">
+              <span className="lp-eyebrow-dot" style={{ background: '#6366f1' }} />
+              CAPABILITIES
+            </div>
+            <h2 className="lp-section-h2">
+              Everything your team needs
+              <br />
+              to <span className="lp-underline-accent">build together</span>.
+            </h2>
+            <p className="lp-section-sub">
+              From real-time CRDT synchronization to sandboxed code execution, CodeHive
+              packs enterprise-grade infrastructure into a frictionless developer experience.
+            </p>
           </div>
-          <h2 className="lp-section-h2">
-            Everything your team needs
-            <br />
-            to <span className="lp-underline-accent">build together</span>.
-          </h2>
-          <p className="lp-section-sub">
-            From real-time CRDT synchronization to sandboxed code execution, CodeHive
-            packs enterprise-grade infrastructure into a frictionless developer experience.
-          </p>
-        </div>
+        </Reveal>
 
         <div className="lp-feature-grid">
           {FEATURES.map((f, i) => (
-            <div key={i} className="lp-feature-card">
-              <div className="lp-feature-icon" style={{ background: f.bg, color: f.color }}>
-                <span>{f.emoji}</span>
+            <Reveal key={i} dir="up" delay={i * 100}>
+              <div className="lp-feature-card lp-feature-card-hover" style={{'--accent': f.color}}>
+                <div className="lp-feature-icon lp-icon-hover" style={{ background: f.bg, color: f.color }}>
+                  <span>{f.emoji}</span>
+                </div>
+                <h3 className="lp-feature-title">{f.title}</h3>
+                <p className="lp-feature-desc">{f.desc}</p>
+                <div className="lp-feature-corner" style={{ background: f.bg }} />
               </div>
-              <h3 className="lp-feature-title">{f.title}</h3>
-              <p className="lp-feature-desc">{f.desc}</p>
-              <div className="lp-feature-corner" style={{ background: f.bg }} />
-            </div>
+            </Reveal>
           ))}
 
           {/* Extra wide feature card */}
-          <div className="lp-feature-card lp-feature-card-wide">
-            <div className="lp-feature-wide-left">
-              <div className="lp-feature-icon" style={{ background: '#cffafe', color: '#06b6d4' }}>
-                <span>🔗</span>
-              </div>
-              <h3 className="lp-feature-title">Shared Room Execution</h3>
-              <p className="lp-feature-desc">
-                In collaborative rooms, the server executes its own verified copy of the shared document
-                (<code>Y.Text('code')</code>) and broadcasts formatted run results to all peers via{' '}
-                <code>Y.Map('meta')</code>. Every participant sees live output simultaneously.
-              </p>
-              <button className="lp-btn-primary lp-btn-sm" onClick={onGetStarted}>
-                Try it free →
-              </button>
-            </div>
-            <div className="lp-feature-wide-right" aria-hidden="true">
-              <ShapeCircle color="#06b6d4" size={64} style={{ position: 'absolute', top: 10, right: 40, opacity: 0.7 }} />
-              <ShapeTriangle color="#6366f1" size={50} style={{ position: 'absolute', bottom: 20, right: 80, transform: 'rotate(30deg)' }} />
-              <ShapeRect color="#f59e0b" w={80} h={36} radius={18} style={{ position: 'absolute', top: 60, right: 20 }} />
-              <ShapeHalf color="#a855f7" size={60} style={{ position: 'absolute', bottom: 10, right: 150 }} />
-              <div className="lp-mini-terminal">
-                <div className="lp-mini-terminal-bar">
-                  <span />
-                  <span style={{background:'#f59e0b'}} />
-                  <span style={{background:'#10b981'}} />
+          <Reveal dir="up" delay={300}>
+            <div className="lp-feature-card lp-feature-card-wide lp-feature-card-hover" style={{'--accent':'#06b6d4'}}>
+              <div className="lp-feature-wide-left">
+                <div className="lp-feature-icon lp-icon-hover" style={{ background: '#cffafe', color: '#06b6d4' }}>
+                  <span>🔗</span>
                 </div>
-                <p style={{ color: '#10b981', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>
-                  ✓ Compiled in 0.89s
+                <h3 className="lp-feature-title">Shared Room Execution</h3>
+                <p className="lp-feature-desc">
+                  In collaborative rooms, the server executes its own verified copy of the shared document
+                  (<code>Y.Text('code')</code>) and broadcasts formatted run results to all peers via{' '}
+                  <code>Y.Map('meta')</code>. Every participant sees live output simultaneously.
                 </p>
-                <p style={{ color: '#94a3b8', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>
-                  Hello from CodeHive!
-                </p>
-                <p style={{ color: '#6366f1', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>
-                  Process exited with code 0
-                </p>
+                <button className="lp-btn-primary lp-btn-sm" onClick={onGetStarted}>
+                  Try it free →
+                </button>
+              </div>
+              <div className="lp-feature-wide-right" aria-hidden="true">
+                <ShapeCircle color="#06b6d4" size={64} style={{ position: 'absolute', top: 10, right: 40, opacity: 0.7 }} />
+                <ShapeTriangle color="#6366f1" size={50} style={{ position: 'absolute', bottom: 20, right: 80, transform: 'rotate(30deg)' }} />
+                <ShapeRect color="#f59e0b" w={80} h={36} radius={18} style={{ position: 'absolute', top: 60, right: 20 }} />
+                <ShapeHalf color="#a855f7" size={60} style={{ position: 'absolute', bottom: 10, right: 150 }} />
+                <div className="lp-mini-terminal">
+                  <div className="lp-mini-terminal-bar">
+                    <span />
+                    <span style={{background:'#f59e0b'}} />
+                    <span style={{background:'#10b981'}} />
+                  </div>
+                  <p style={{ color: '#10b981', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>✓ Compiled in 0.89s</p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>Hello from CodeHive!</p>
+                  <p style={{ color: '#6366f1', fontSize: '0.78rem', fontFamily: 'monospace', margin: 0 }}>Process exited with code 0</p>
+                </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── LANGUAGES SECTION ── */}
       <section id="languages" className="lp-section lp-lang-section">
         <div className="lp-lang-inner">
-          <div>
-            <div className="lp-eyebrow">
-              <span className="lp-eyebrow-dot" style={{ background: '#f97316' }} />
-              LANGUAGES
+          <Reveal dir="left">
+            <div>
+              <div className="lp-eyebrow">
+                <span className="lp-eyebrow-dot" style={{ background: '#f97316' }} />
+                LANGUAGES
+              </div>
+              <h2 className="lp-section-h2 lp-lang-h2">
+                Code in any
+                <br />
+                <span className="lp-underline-accent">language you love</span>.
+              </h2>
+              <p className="lp-section-sub" style={{ maxWidth: 440 }}>
+                CodeHive ships with first-class support for 7 languages, each with a starter
+                template, stdin support, and sandboxed Judge0 execution.
+              </p>
+              <button className="lp-btn-primary lp-btn-lg" style={{ marginTop: 28 }} onClick={onGetStarted}>
+                Open the editor →
+              </button>
             </div>
-            <h2 className="lp-section-h2 lp-lang-h2">
-              Code in any
-              <br />
-              <span className="lp-underline-accent">language you love</span>.
-            </h2>
-            <p className="lp-section-sub" style={{ maxWidth: 440 }}>
-              CodeHive ships with first-class support for 7 languages, each with a starter
-              template, stdin support, and sandboxed Judge0 execution.
-            </p>
-            <button className="lp-btn-primary lp-btn-lg" style={{ marginTop: 28 }} onClick={onGetStarted}>
-              Open the editor →
-            </button>
-          </div>
+          </Reveal>
 
           <div className="lp-lang-grid">
             {LANGS.map((l, i) => (
-              <div key={l.name} className="lp-lang-card"
-                style={{ animationDelay: `${i * 0.08}s` }}>
-                <div className="lp-lang-circle" style={{ background: l.bg, color: l.color }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{l.name.slice(0, 2)}</span>
+              <Reveal key={l.name} dir="scale" delay={i * 60}>
+                <div className="lp-lang-card lp-lang-card-hover"
+                  style={{ '--lang-color': l.color, '--lang-bg': l.bg }}>
+                  <div className="lp-lang-circle" style={{ background: l.bg, color: l.color }}>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{l.name.slice(0, 2)}</span>
+                  </div>
+                  <span className="lp-lang-name">{l.name}</span>
                 </div>
-                <span className="lp-lang-name">{l.name}</span>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -376,23 +478,24 @@ room.onCollaborator((user) => {
 
       {/* ── SECURITY SECTION ── */}
       <section id="security" className="lp-section lp-security-section">
-        {/* Geometric decorators */}
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
           <ShapeCircle color="#f97316" size={180} style={{ position: 'absolute', top: -60, right: -60, opacity: 0.12 }} />
           <ShapeTriangle color="#6366f1" size={120} style={{ position: 'absolute', bottom: -30, left: 60, opacity: 0.12 }} />
         </div>
 
-        <div className="lp-section-header">
-          <div className="lp-eyebrow lp-eyebrow-dark">
-            <span className="lp-eyebrow-dot" style={{ background: '#10b981' }} />
-            SECURITY
+        <Reveal dir="up">
+          <div className="lp-section-header">
+            <div className="lp-eyebrow lp-eyebrow-dark">
+              <span className="lp-eyebrow-dot" style={{ background: '#10b981' }} />
+              SECURITY
+            </div>
+            <h2 className="lp-section-h2">
+              Built secure,
+              <br />
+              <span className="lp-underline-accent-green">from the ground up</span>.
+            </h2>
           </div>
-          <h2 className="lp-section-h2">
-            Built secure,
-            <br />
-            <span className="lp-underline-accent-green">from the ground up</span>.
-          </h2>
-        </div>
+        </Reveal>
 
         <div className="lp-security-grid">
           {[
@@ -403,45 +506,48 @@ room.onCollaborator((user) => {
             { icon: '🛡️', title: 'XSS Protection', desc: 'Compiler output is rendered strictly as plain text — no HTML injection or unsafe DOM operations. Period.' },
             { icon: '🔑', title: 'Firebase Auth Token Chain', desc: 'Chain-of-trust tickets issued via Firebase Auth-verified REST endpoints keep long-lived credentials away from WebSocket channels.' },
           ].map((item, i) => (
-            <div key={i} className="lp-security-card">
-              <div className="lp-security-icon">{item.icon}</div>
-              <h4 className="lp-security-title">{item.title}</h4>
-              <p className="lp-security-desc">{item.desc}</p>
-            </div>
+            <Reveal key={i} dir="up" delay={i * 80}>
+              <div className="lp-security-card lp-security-card-hover">
+                <div className="lp-security-icon lp-sec-icon-hover">{item.icon}</div>
+                <h4 className="lp-security-title">{item.title}</h4>
+                <p className="lp-security-desc">{item.desc}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ── CTA BANNER ── */}
       <section className="lp-cta-banner">
-        {/* Geometric shapes inside banner */}
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
           <ShapeCircle color="white" size={120} style={{ position: 'absolute', top: -30, left: '8%', opacity: 0.08 }} />
           <ShapeTriangle color="white" size={80} style={{ position: 'absolute', bottom: -10, right: '12%', opacity: 0.1, transform: 'rotate(20deg)' }} />
           <ShapeRect color="white" w={60} h={60} radius={8} style={{ position: 'absolute', top: 20, right: '35%', opacity: 0.06, transform: 'rotate(35deg)' }} />
         </div>
 
-        <div className="lp-eyebrow" style={{ justifyContent: 'center', color: 'rgba(255,255,255,0.7)' }}>
-          <span className="lp-eyebrow-dot" style={{ background: '#fbbf24' }} />
-          GET STARTED TODAY
-        </div>
-        <h2 className="lp-cta-h2">
-          Bring your dev team
-          <br />
-          into one hive.
-        </h2>
-        <p className="lp-cta-sub">
-          CodeHive is free to get started. No credit card required.
-          56 automated tests ensure everything just works.
-        </p>
-        <div className="lp-cta-btns">
-          <button className="lp-btn-white lp-btn-lg" onClick={onGetStarted}>
-            Create free account →
-          </button>
-          <button className="lp-btn-ghost-white" onClick={onLogin}>
-            Sign in
-          </button>
-        </div>
+        <Reveal dir="up">
+          <div className="lp-eyebrow" style={{ justifyContent: 'center', color: 'rgba(255,255,255,0.7)' }}>
+            <span className="lp-eyebrow-dot" style={{ background: '#fbbf24' }} />
+            GET STARTED TODAY
+          </div>
+          <h2 className="lp-cta-h2">
+            Bring your dev team
+            <br />
+            into one hive.
+          </h2>
+          <p className="lp-cta-sub">
+            CodeHive is free to get started. No credit card required.
+            56 automated tests ensure everything just works.
+          </p>
+          <div className="lp-cta-btns">
+            <button className="lp-btn-white lp-btn-lg" onClick={onGetStarted}>
+              Create free account →
+            </button>
+            <button className="lp-btn-ghost-white" onClick={onLogin}>
+              Sign in
+            </button>
+          </div>
+        </Reveal>
       </section>
 
       {/* ── FOOTER ── */}
@@ -542,8 +648,34 @@ room.onCollaborator((user) => {
           font-size: 0.9rem;
           font-weight: 500;
           transition: color 0.18s;
+          position: relative;
+          padding-bottom: 2px;
+        }
+        /* Animated underline slide on nav links */
+        .lp-nav-links a::after {
+          content: '';
+          position: absolute;
+          bottom: -2px; left: 0;
+          width: 0; height: 2px;
+          background: #6366f1;
+          border-radius: 2px;
+          transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
         }
         .lp-nav-links a:hover { color: #6366f1; }
+        .lp-nav-links a:hover::after { width: 100%; }
+
+        /* Logo hover */
+        .lp-logo {
+          transition: transform 0.2s ease;
+        }
+        .lp-logo:hover { transform: scale(1.04); }
+        .lp-logo-hex {
+          transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .lp-logo:hover .lp-logo-hex {
+          box-shadow: 0 0 0 4px rgba(99,102,241,0.2);
+          transform: rotate(-6deg);
+        }
 
         .lp-nav-actions {
           display: flex;
@@ -749,13 +881,23 @@ room.onCollaborator((user) => {
           border-radius: 20px;
           font-size: 0.72rem;
           font-weight: 700;
+          cursor: pointer;
+          transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+        }
+        .lp-lang-badge:hover {
+          transform: translateY(-3px) scale(1.08);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
-        /* Hero visual */
+        /* ═══════════════════════════════════
+           HERO VISUAL + ALL ANIMATIONS
+        ═══════════════════════════════════ */
         .lp-hero-visual {
           position: relative;
           height: 520px;
         }
+
+        /* ── Blob: slow breathe ── */
         .lp-hero-blob {
           position: absolute;
           width: 420px; height: 420px;
@@ -763,9 +905,14 @@ room.onCollaborator((user) => {
           background: radial-gradient(circle, #e0e7ff 0%, #f3e8ff 60%, transparent 100%);
           top: 50%; left: 50%;
           transform: translate(-50%, -50%);
+          animation: lp-blob-breathe 7s ease-in-out infinite;
+        }
+        @keyframes lp-blob-breathe {
+          0%,100% { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+          50%      { transform: translate(-50%,-50%) scale(1.07); opacity: 0.85; }
         }
 
-        /* Floating code card */
+        /* ── Floating code card ── */
         .lp-code-card {
           position: absolute;
           top: 50%; left: 50%;
@@ -776,6 +923,14 @@ room.onCollaborator((user) => {
           width: 300px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.25);
           z-index: 10;
+        }
+        /* Card levitate — offset so it stacks with translate */
+        .lp-card-float {
+          animation: lp-card-levitate 5s ease-in-out infinite;
+        }
+        @keyframes lp-card-levitate {
+          0%,100% { transform: translate(-50%,-50%) translateY(0px);   box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+          50%      { transform: translate(-50%,-50%) translateY(-12px); box-shadow: 0 36px 72px rgba(0,0,0,0.18); }
         }
         .lp-code-card-dots {
           display: flex; gap: 6px; margin-bottom: 14px;
@@ -791,8 +946,23 @@ room.onCollaborator((user) => {
           white-space: pre-wrap;
           margin: 0;
         }
+        /* Blinking cursor at end of snippet */
+        .lp-cursor {
+          display: inline-block;
+          width: 2px;
+          height: 0.85em;
+          background: #a5b4fc;
+          margin-left: 2px;
+          vertical-align: text-bottom;
+          border-radius: 1px;
+          animation: lp-blink 1.1s step-end infinite;
+        }
+        @keyframes lp-blink {
+          0%,100% { opacity: 1; }
+          50%      { opacity: 0; }
+        }
 
-        /* Live pill */
+        /* ── Live pill — slide in from right, then gentle bob ── */
         .lp-live-pill {
           position: absolute;
           top: 12%; right: -12px;
@@ -808,24 +978,40 @@ room.onCollaborator((user) => {
           box-shadow: 0 4px 20px rgba(0,0,0,0.12);
           z-index: 20;
         }
+        .lp-slide-in-right {
+          animation:
+            lp-enter-right 0.7s cubic-bezier(0.22,1,0.36,1) both,
+            lp-pill-bob 4s ease-in-out 0.7s infinite;
+        }
+        @keyframes lp-enter-right {
+          from { opacity: 0; transform: translateX(40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes lp-pill-bob {
+          0%,100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
+        }
+
         .lp-live-dot {
           width: 8px; height: 8px;
           border-radius: 50%;
           background: #10b981;
-          animation: lp-pulse-dot 1.5s infinite;
+          animation: lp-pulse-dot 1.5s ease-in-out infinite;
         }
         @keyframes lp-pulse-dot {
-          0%,100% { opacity:1; transform:scale(1); }
-          50% { opacity:0.5; transform:scale(1.4); }
+          0%,100% { opacity:1; transform:scale(1);   box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+          50%      { opacity:1; transform:scale(1.3); box-shadow: 0 0 0 5px rgba(16,185,129,0); }
         }
         .lp-live-avatars { display:flex; align-items:center; }
         .lp-avatar {
           width:22px; height:22px;
           border-radius:50%;
           border:2px solid white;
+          transition: transform 0.2s;
         }
+        .lp-live-pill:hover .lp-avatar { transform: scale(1.15); }
 
-        /* Run chip */
+        /* ── Run chip — slide in from left, then pulse shimmer ── */
         .lp-run-chip {
           position: absolute;
           bottom: 20%; left: -12px;
@@ -840,8 +1026,76 @@ room.onCollaborator((user) => {
           font-weight: 600;
           box-shadow: 0 4px 20px rgba(0,0,0,0.2);
           z-index: 20;
+          overflow: hidden;
         }
-        .lp-run-icon { font-size: 0.7rem; }
+        .lp-slide-in-left {
+          animation:
+            lp-enter-left 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both,
+            lp-chip-bob 4.5s ease-in-out 1s infinite;
+        }
+        @keyframes lp-enter-left {
+          from { opacity: 0; transform: translateX(-40px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes lp-chip-bob {
+          0%,100% { transform: translateY(0); }
+          50%      { transform: translateY(-5px); }
+        }
+        /* Shimmer sweep across chip */
+        .lp-run-chip::after {
+          content: '';
+          position: absolute;
+          top: 0; left: -60%;
+          width: 50%; height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+          animation: lp-shimmer 3s ease-in-out 1.5s infinite;
+        }
+        @keyframes lp-shimmer {
+          0%   { left: -60%; }
+          100% { left: 120%; }
+        }
+        /* Pulsing play icon */
+        .lp-run-blink {
+          animation: lp-play-pulse 1.8s ease-in-out infinite;
+        }
+        @keyframes lp-play-pulse {
+          0%,100% { opacity: 1;   transform: scale(1); }
+          50%      { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        /* ── Shape keyframes ── */
+        /* Slow vertical float A */
+        @keyframes lp-float-a {
+          0%,100% { transform: translateY(0px); }
+          50%      { transform: translateY(-18px); }
+        }
+        /* Faster float B — also lateral */
+        @keyframes lp-float-b {
+          0%,100% { transform: translateY(0px) translateX(0px); }
+          33%      { transform: translateY(-12px) translateX(5px); }
+          66%      { transform: translateY(-6px) translateX(-5px); }
+        }
+        /* Drift float C */
+        @keyframes lp-float-c {
+          0%,100% { transform: rotate(180deg) translateY(0px); }
+          50%      { transform: rotate(180deg) translateY(-14px); }
+        }
+        /* Continuous slow spin */
+        @keyframes lp-spin-slow {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        /* Rocking rotation */
+        @keyframes lp-rock {
+          0%,100% { transform: rotate(0deg);  }
+          25%      { transform: rotate(8deg);  }
+          75%      { transform: rotate(-8deg); }
+        }
+        /* Side sway */
+        @keyframes lp-sway {
+          0%,100% { transform: translateX(0px);  }
+          50%      { transform: translateX(12px); }
+        }
 
         /* ── STATS BAR ── */
         .lp-stats-bar {
@@ -1171,6 +1425,133 @@ room.onCollaborator((user) => {
           text-align: center;
         }
 
+        /* ═══════════════════════════════════
+           SCROLL REVEAL STYLES
+        ═══════════════════════════════════ */
+        .rv-base {
+          opacity: 0;
+          transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: opacity, transform;
+        }
+        .rv-up {
+          transform: translateY(32px);
+        }
+        .rv-down {
+          transform: translateY(-32px);
+        }
+        .rv-left {
+          transform: translateX(-36px);
+        }
+        .rv-right {
+          transform: translateX(36px);
+        }
+        .rv-scale {
+          transform: scale(0.93);
+        }
+        .rv-base.rv-visible {
+          opacity: 1;
+          transform: translate(0, 0) scale(1);
+        }
+
+        /* ═══════════════════════════════════
+           ENHANCED HOVER EFFECTS
+        ═══════════════════════════════════ */
+        /* Stats bar hover */
+        .lp-stat-hover {
+          cursor: default;
+          border-radius: 12px;
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .lp-stat-hover:hover {
+          transform: translateY(-4px);
+        }
+        .lp-stat-hover:hover .lp-stat-num {
+          color: #a5b4fc;
+          text-shadow: 0 0 20px rgba(165,180,252,0.4);
+        }
+        .lp-stat-hover:hover .lp-stat-label {
+          color: #ffffff;
+        }
+
+        /* Feature card hover */
+        .lp-feature-card-hover {
+          transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+        }
+        .lp-feature-card-hover:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.1), 0 0 0 1.5px var(--accent, #6366f1);
+          border-color: transparent;
+        }
+        .lp-feature-card-hover:hover .lp-icon-hover {
+          transform: scale(1.15) rotate(-6deg);
+        }
+        .lp-icon-hover {
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .lp-feature-card-hover:hover .lp-feature-corner {
+          transform: scale(1.6);
+          opacity: 0.75;
+        }
+        .lp-feature-corner {
+          transition: transform 0.35s ease, opacity 0.35s ease;
+        }
+
+        /* Language cards hover */
+        .lp-lang-card-hover {
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .lp-lang-card-hover:hover {
+          transform: translateY(-8px) scale(1.04);
+          border-color: var(--lang-color, #6366f1);
+          box-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--lang-color, #6366f1);
+        }
+        .lp-lang-card-hover:hover .lp-lang-circle {
+          transform: scale(1.12) rotate(6deg);
+        }
+        .lp-lang-circle {
+          transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Security cards hover */
+        .lp-security-card-hover {
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .lp-security-card-hover:hover {
+          transform: translateY(-6px);
+          border-color: #a7f3d0;
+          box-shadow: 0 14px 32px -8px rgba(16, 185, 129, 0.16);
+        }
+        .lp-sec-icon-hover {
+          display: inline-block;
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .lp-security-card-hover:hover .lp-sec-icon-hover {
+          transform: scale(1.25) translateY(-2px);
+        }
+
+        /* Hero code card interactive hover */
+        .lp-code-card {
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .lp-code-card:hover {
+          box-shadow: 0 28px 80px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.4);
+          transform: translate(-50%, -50%) translateY(-14px) scale(1.02);
+        }
+
+        /* Buttons interaction polish */
+        .lp-btn-primary svg {
+          transition: transform 0.2s ease;
+        }
+        .lp-btn-primary:hover svg {
+          transform: translateX(4px);
+        }
+        .lp-btn-primary:active,
+        .lp-btn-white:active,
+        .lp-btn-ghost:active,
+        .lp-btn-ghost-white:active {
+          transform: scale(0.97);
+        }
+
         /* ── RESPONSIVE ── */
         @media (max-width: 900px) {
           .lp-hero { grid-template-columns: 1fr; min-height: auto; padding-top: 60px; }
@@ -1194,6 +1575,252 @@ room.onCollaborator((user) => {
           .lp-stats-bar { gap: 16px; }
           .lp-stat-divider { display: none; }
           .lp-stat { padding: 8px 12px; }
+        }
+
+        /* ── Theme Toggle Button Styles ── */
+        .lp-theme-btn {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          border: 1.5px solid #e5e7eb;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #4b5563;
+          transition: all 0.2s ease;
+        }
+        .lp-theme-btn:hover {
+          border-color: #6366f1;
+          color: #6366f1;
+          transform: rotate(15deg) scale(1.05);
+        }
+        .lp-theme-btn .sun-icon {
+          color: #f59e0b;
+        }
+        .lp-theme-btn .moon-icon {
+          color: #6366f1;
+        }
+        .lp-mobile-theme-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: transparent;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 50px;
+          padding: 10px 18px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #374151;
+          cursor: pointer;
+          width: 100%;
+          justify-content: center;
+        }
+
+        /* ── Dark Mode Landing Page ── */
+        .lp-root.dark {
+          background: #090d16;
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-nav {
+          background: rgba(9, 13, 22, 0.92);
+          border-bottom-color: #1e293b;
+        }
+        .lp-root.dark .lp-logo-name {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-logo-hex {
+          background: linear-gradient(135deg, #1e1b4b, #2e1065);
+        }
+        .lp-root.dark .lp-nav-links a {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-nav-links a:hover {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-theme-btn {
+          background: #111827;
+          border-color: #1f2937;
+          color: #f1f5f9;
+        }
+        .lp-root.dark .lp-theme-btn:hover {
+          border-color: #6366f1;
+        }
+        .lp-root.dark .lp-btn-ghost {
+          border-color: #334155;
+          color: #e2e8f0;
+        }
+        .lp-root.dark .lp-btn-ghost:hover {
+          border-color: #6366f1;
+          color: #818cf8;
+        }
+        .lp-root.dark .lp-btn-primary {
+          background: #6366f1;
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-btn-primary:hover {
+          background: #4f46e5;
+          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+        .lp-root.dark .lp-btn-outline {
+          color: #cbd5e1;
+        }
+        .lp-root.dark .lp-btn-outline:hover {
+          color: #818cf8;
+        }
+        .lp-root.dark .lp-mobile-menu {
+          background: #0f172a;
+          border-top-color: #1e293b;
+        }
+        .lp-root.dark .lp-mobile-menu a {
+          color: #cbd5e1;
+        }
+        .lp-root.dark .lp-mobile-theme-btn {
+          border-color: #334155;
+          color: #cbd5e1;
+        }
+        .lp-root.dark .lp-hero-h1 {
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-hero-sub {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-trust-label {
+          color: #64748b;
+        }
+        .lp-root.dark .lp-hero-blob {
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 70%);
+        }
+        .lp-root.dark .lp-stats-bar {
+          background: #0d121f;
+          border-color: #1e293b;
+        }
+        .lp-root.dark .lp-stat-num {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-stat-label {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-stat-divider {
+          background: #1e293b;
+        }
+        .lp-root.dark .lp-section-h2 {
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-section-sub {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-live-pill {
+          background: #111827;
+          border: 1px solid #1f2937;
+          color: #f8fafc;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+        .lp-root.dark .lp-feature-card {
+          background: #0d121f;
+          border-color: #1e293b;
+        }
+        .lp-root.dark .lp-feature-card:hover {
+          border-color: #6366f1;
+          box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.6);
+        }
+        .lp-root.dark .lp-feature-title {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-feature-desc {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-feature-desc code {
+          background: #1e293b;
+          color: #818cf8;
+        }
+        .lp-root.dark .lp-feature-wide-left .lp-feature-title {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-feature-wide-left .lp-feature-desc {
+          color: #94a3b8;
+        }
+
+        /* ── Dark Mode Languages Section ── */
+        .lp-root.dark .lp-lang-section {
+          background: #0d121f;
+          border: 1px solid #1e293b;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+        .lp-root.dark .lp-lang-h2 {
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-lang-section .lp-section-sub {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-lang-card {
+          background: #111827;
+          border: 1px solid #1f2937;
+          color: #f8fafc;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        .lp-root.dark .lp-lang-card:hover {
+          background: #161f30;
+          border-color: #6366f1;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+        }
+        .lp-root.dark .lp-lang-name {
+          color: #f8fafc;
+        }
+
+        /* ── Dark Mode Security Section ── */
+        .lp-root.dark .lp-security-section {
+          background: #0d121f;
+          border: 1px solid #1e293b;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+        .lp-root.dark .lp-security-section .lp-section-h2 {
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-security-card {
+          background: #111827;
+          border: 1px solid #1f2937;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        .lp-root.dark .lp-security-card:hover {
+          background: #161f30;
+          border-color: #10b981;
+          box-shadow: 0 10px 28px rgba(16, 185, 129, 0.15);
+        }
+        .lp-root.dark .lp-security-title {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-security-desc {
+          color: #94a3b8;
+        }
+
+        /* ── Dark Mode Eyebrows & Footer ── */
+        .lp-root.dark .lp-eyebrow {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-eyebrow-dark {
+          color: #cbd5e1;
+        }
+        .lp-root.dark .lp-footer {
+          background: #07090f;
+          border-top-color: #1e293b;
+        }
+        .lp-root.dark .lp-footer-tagline {
+          color: #64748b;
+        }
+        .lp-root.dark .lp-footer-col h5 {
+          color: #f8fafc;
+        }
+        .lp-root.dark .lp-footer-col a {
+          color: #94a3b8;
+        }
+        .lp-root.dark .lp-footer-col a:hover {
+          color: #ffffff;
+        }
+        .lp-root.dark .lp-footer-bottom {
+          border-top-color: #1e293b;
+          color: #64748b;
         }
       `}</style>
     </div>

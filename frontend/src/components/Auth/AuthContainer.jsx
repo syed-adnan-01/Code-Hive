@@ -4,56 +4,88 @@ import { RegisterForm } from './RegisterForm';
 import { ResetPasswordModal } from './ResetPasswordModal';
 import { Hexagon, Code2, Users2, Zap, ShieldCheck } from 'lucide-react';
 
+/* Decorative geometric shapes matching the landing page theme */
+const ShapeCircle = ({ color, size = 80, style }) => (
+  <div style={{ width: size, height: size, borderRadius: '50%', background: color, ...style }} />
+);
+
+const ShapeTriangle = ({ color, size = 60, style }) => (
+  <div style={{
+    width: 0, height: 0,
+    borderLeft: `${size / 2}px solid transparent`,
+    borderRight: `${size / 2}px solid transparent`,
+    borderBottom: `${size}px solid ${color}`,
+    ...style
+  }} />
+);
+
+const ShapeRect = ({ color, w = 100, h = 50, radius = 8, style }) => (
+  <div style={{ width: w, height: h, background: color, borderRadius: radius, ...style }} />
+);
+
 export const AuthContainer = () => {
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   return (
     <div className="auth-page-wrapper">
+      {/* Background ambient floating shapes */}
+      <div className="auth-ambient-shapes" aria-hidden="true">
+        <div className="auth-blob" />
+        <ShapeCircle color="#f97316" size={70} style={{ position: 'absolute', top: '10%', left: '8%', opacity: 0.85, animation: 'auth-float-a 6s ease-in-out infinite' }} />
+        <ShapeTriangle color="#6366f1" size={50} style={{ position: 'absolute', top: '25%', right: '12%', opacity: 0.9, animation: 'auth-float-b 5s ease-in-out infinite' }} />
+        <ShapeRect color="#10b981" w={44} h={44} radius={10} style={{ position: 'absolute', bottom: '15%', left: '12%', opacity: 0.85, transform: 'rotate(15deg)', animation: 'auth-spin-slow 14s linear infinite' }} />
+        <ShapeCircle color="#fbbf24" size={40} style={{ position: 'absolute', bottom: '25%', right: '8%', opacity: 0.8, animation: 'auth-float-a 4.5s ease-in-out infinite 1s' }} />
+      </div>
+
       <div className="auth-content-grid">
         {/* Left Side: Brand Teaser & Value Props */}
         <div className="auth-hero-section">
-          <div className="hero-badge font-code">
-            <Zap size={14} className="text-cyan" />
+          <div className="auth-eyebrow">
+            <span className="auth-eyebrow-dot" />
+            <Zap size={13} style={{ color: '#f59e0b' }} />
             <span>REAL-TIME COLLABORATIVE ENGINE</span>
           </div>
 
-          <h1 className="hero-title font-brand">
-            Build code together, in <span className="gradient-text">Real-Time Hive</span>.
+          <h1 className="auth-hero-h1">
+            Build code together,
+            <br />
+            in <span className="auth-h1-accent">Real-Time Hive</span>.
           </h1>
 
-          <p className="hero-subtitle">
-            CodeHive connects developer teams with ultra-low latency pair-programming, live state sync, integrated terminal, and instant deployment preview.
+          <p className="auth-hero-sub">
+            CodeHive connects developer teams with ultra-low latency pair-programming,
+            live state sync, integrated terminal, and instant deployment preview.
           </p>
 
-          <div className="feature-list">
-            <div className="feature-item">
-              <div className="feature-icon-box cyan-glow">
+          <div className="auth-feature-list">
+            <div className="auth-feature-card">
+              <div className="auth-feature-icon" style={{ background: '#cffafe', color: '#06b6d4' }}>
                 <Code2 size={20} />
               </div>
-              <div>
-                <h4 className="feature-title">Multi-cursor Code Editor</h4>
-                <p className="feature-desc">Sub-10ms synchronization with Monaco editor kernel.</p>
+              <div className="auth-feature-text">
+                <h4 className="auth-feature-title">Multi-cursor Code Editor</h4>
+                <p className="auth-feature-desc">Sub-10ms synchronization with Monaco editor kernel.</p>
               </div>
             </div>
 
-            <div className="feature-item">
-              <div className="feature-icon-box purple-glow">
+            <div className="auth-feature-card">
+              <div className="auth-feature-icon" style={{ background: '#e0e7ff', color: '#6366f1' }}>
                 <Users2 size={20} />
               </div>
-              <div>
-                <h4 className="feature-title">Instant Workspace Rooms</h4>
-                <p className="feature-desc">Share room links and instantly pair program with zero setup.</p>
+              <div className="auth-feature-text">
+                <h4 className="auth-feature-title">Instant Workspace Rooms</h4>
+                <p className="auth-feature-desc">Share room links and instantly pair program with zero setup.</p>
               </div>
             </div>
 
-            <div className="feature-item">
-              <div className="feature-icon-box pink-glow">
+            <div className="auth-feature-card">
+              <div className="auth-feature-icon" style={{ background: '#d1fae5', color: '#10b981' }}>
                 <ShieldCheck size={20} />
               </div>
-              <div>
-                <h4 className="feature-title">Enterprise Security</h4>
-                <p className="feature-desc">Powered by Firebase Auth token validation & encrypted channels.</p>
+              <div className="auth-feature-text">
+                <h4 className="auth-feature-title">Enterprise Security</h4>
+                <p className="auth-feature-desc">Powered by Firebase Auth token validation &amp; encrypted channels.</p>
               </div>
             </div>
           </div>
@@ -61,13 +93,13 @@ export const AuthContainer = () => {
 
         {/* Right Side: Auth Card Container */}
         <div className="auth-card-container">
-          <div className="glass-card auth-card">
+          <div className="auth-card">
             {/* Header */}
             <div className="auth-card-header">
               <div className="auth-card-icon">
                 <Hexagon size={24} />
               </div>
-              <h2 className="auth-card-title font-brand">
+              <h2 className="auth-card-title">
                 {activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
               </h2>
               <p className="auth-card-subtitle">
@@ -78,15 +110,17 @@ export const AuthContainer = () => {
             </div>
 
             {/* Tab Switcher */}
-            <div className="tab-switcher">
+            <div className="auth-tab-switcher">
               <button
-                className={`tab-btn ${activeTab === 'login' ? 'active' : ''}`}
+                type="button"
+                className={`auth-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
                 onClick={() => setActiveTab('login')}
               >
                 Sign In
               </button>
               <button
-                className={`tab-btn ${activeTab === 'register' ? 'active' : ''}`}
+                type="button"
+                className={`auth-tab-btn ${activeTab === 'register' ? 'active' : ''}`}
                 onClick={() => setActiveTab('register')}
               >
                 Register
@@ -115,63 +149,125 @@ export const AuthContainer = () => {
           z-index: 1;
           max-width: 1200px;
           margin: 0 auto;
-          padding: 40px 24px 80px 24px;
+          padding: 60px 24px 80px 24px;
+          width: 100%;
         }
+        .auth-ambient-shapes {
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .auth-blob {
+          position: absolute;
+          width: 480px;
+          height: 480px;
+          border-radius: 50%;
+          background: radial-gradient(circle, #e0e7ff 0%, #f3e8ff 50%, transparent 80%);
+          top: 15%;
+          left: -100px;
+          opacity: 0.7;
+        }
+
+        @keyframes auth-float-a {
+          0%, 100% { transform: translateY(0px); }
+          50%      { transform: translateY(-14px); }
+        }
+        @keyframes auth-float-b {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50%      { transform: translateY(-12px) rotate(8deg); }
+        }
+        @keyframes auth-spin-slow {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+
         .auth-content-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 48px;
+          gap: 56px;
           align-items: center;
+          position: relative;
+          z-index: 1;
         }
         @media (min-width: 960px) {
           .auth-content-grid {
-            grid-template-columns: 1.1fr 0.9fr;
+            grid-template-columns: 1.15fr 0.85fr;
           }
         }
+
+        /* Left Hero Section */
         .auth-hero-section {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 18px;
         }
-        .hero-badge {
+        .auth-eyebrow {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          background: rgba(6, 182, 212, 0.1);
-          border: 1px solid rgba(6, 182, 212, 0.3);
-          color: var(--accent-cyan);
-          padding: 6px 14px;
+          font-family: 'Fira Code', monospace;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: #374151;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          padding: 5px 12px;
           border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          letter-spacing: 0.05em;
           width: fit-content;
         }
-        .hero-title {
-          font-size: 2.8rem;
+        .auth-eyebrow-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #f97316;
+        }
+        .auth-hero-h1 {
+          font-family: 'Outfit', sans-serif;
+          font-size: clamp(2.4rem, 4vw, 3.4rem);
           font-weight: 800;
-          line-height: 1.15;
-          letter-spacing: -0.02em;
-          color: #ffffff;
+          line-height: 1.1;
+          letter-spacing: -0.03em;
+          color: #111827;
+          margin: 0;
         }
-        .hero-subtitle {
+        .auth-h1-accent {
+          color: #6366f1;
+        }
+        .auth-hero-sub {
           font-size: 1.05rem;
-          color: var(--text-secondary);
-          line-height: 1.6;
-          max-width: 520px;
+          color: #6b7280;
+          line-height: 1.65;
+          max-width: 500px;
+          margin: 0 0 10px 0;
         }
-        .feature-list {
+
+        /* Feature Cards */
+        .auth-feature-list {
           display: flex;
           flex-direction: column;
-          gap: 18px;
-          margin-top: 16px;
+          gap: 14px;
+          margin-top: 8px;
         }
-        .feature-item {
+        .auth-feature-card {
           display: flex;
           align-items: flex-start;
           gap: 16px;
+          background: #ffffff;
+          border: 1px solid #f1f5f9;
+          border-radius: 16px;
+          padding: 16px 18px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
-        .feature-icon-box {
+        .auth-feature-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+          border-color: #e0e7ff;
+        }
+        .auth-feature-icon {
           width: 44px;
           height: 44px;
           border-radius: 12px;
@@ -180,42 +276,37 @@ export const AuthContainer = () => {
           justify-content: center;
           flex-shrink: 0;
         }
-        .cyan-glow {
-          background: rgba(6, 182, 212, 0.15);
-          border: 1px solid rgba(6, 182, 212, 0.3);
-          color: var(--accent-cyan);
-          box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        .auth-feature-text {
+          flex: 1;
         }
-        .purple-glow {
-          background: rgba(168, 85, 247, 0.15);
-          border: 1px solid rgba(168, 85, 247, 0.3);
-          color: var(--accent-purple);
-          box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+        .auth-feature-title {
+          font-family: 'Outfit', sans-serif;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 3px 0;
         }
-        .pink-glow {
-          background: rgba(236, 72, 153, 0.15);
-          border: 1px solid rgba(236, 72, 153, 0.3);
-          color: var(--accent-pink);
-          box-shadow: 0 0 15px rgba(236, 72, 153, 0.2);
-        }
-        .feature-title {
-          font-size: 1.02rem;
-          font-weight: 600;
-          color: #ffffff;
-          margin-bottom: 2px;
-        }
-        .feature-desc {
+        .auth-feature-desc {
           font-size: 0.86rem;
-          color: var(--text-secondary);
+          color: #6b7280;
+          line-height: 1.45;
+          margin: 0;
         }
+
+        /* Right Side: Auth Card */
         .auth-card-container {
           display: flex;
           justify-content: center;
+          width: 100%;
         }
         .auth-card {
           width: 100%;
-          max-width: 460px;
+          max-width: 440px;
+          background: #ffffff;
+          border: 1px solid #f1f5f9;
+          border-radius: 24px;
           padding: 36px 32px;
+          box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.03);
           position: relative;
         }
         .auth-card-header {
@@ -226,23 +317,60 @@ export const AuthContainer = () => {
           width: 48px;
           height: 48px;
           border-radius: 14px;
-          background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+          background: linear-gradient(135deg, #6366f1, #a855f7);
           display: flex;
           align-items: center;
           justify-content: center;
           color: #ffffff;
           margin: 0 auto 16px auto;
-          box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+          box-shadow: 0 8px 20px rgba(99, 102, 241, 0.28);
         }
         .auth-card-title {
-          font-size: 1.6rem;
-          font-weight: 700;
-          color: #ffffff;
-          margin-bottom: 6px;
+          font-family: 'Outfit', sans-serif;
+          font-size: 1.65rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #111827;
+          margin: 0 0 6px 0;
         }
         .auth-card-subtitle {
           font-size: 0.88rem;
-          color: var(--text-secondary);
+          color: #6b7280;
+          margin: 0;
+          line-height: 1.5;
+        }
+
+        /* Segmented Tab Switcher */
+        .auth-tab-switcher {
+          display: flex;
+          background: #f3f4f6;
+          border: 1px solid #e5e7eb;
+          border-radius: 50px;
+          padding: 4px;
+          gap: 4px;
+          margin-bottom: 24px;
+        }
+        .auth-tab-btn {
+          flex: 1;
+          border: none;
+          background: transparent;
+          color: #6b7280;
+          padding: 9px 16px;
+          border-radius: 50px;
+          font-size: 0.88rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          font-family: inherit;
+        }
+        .auth-tab-btn:hover {
+          color: #111827;
+        }
+        .auth-tab-btn.active {
+          background: #ffffff;
+          color: #111827;
+          font-weight: 700;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
       `}</style>
     </div>

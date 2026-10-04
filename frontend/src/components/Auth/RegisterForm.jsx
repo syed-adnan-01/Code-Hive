@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, UserPlus, AlertCircle } from 'lucide-react';
 import { SocialAuth } from './SocialAuth';
 
 export const RegisterForm = () => {
@@ -68,7 +68,7 @@ export const RegisterForm = () => {
     <div className="register-form-container">
       {displayError && (
         <div className="auth-error-banner">
-          <AlertCircle size={18} />
+          <AlertCircle size={18} className="flex-shrink-0" />
           <span>{displayError}</span>
         </div>
       )}
@@ -81,9 +81,10 @@ export const RegisterForm = () => {
             <input
               type="text"
               className="input-field"
-              placeholder="Sarah Connor"
+              placeholder="Alex Dev"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              autoComplete="off"
               required
             />
             <User className="input-icon" size={18} />
@@ -97,9 +98,10 @@ export const RegisterForm = () => {
             <input
               type="email"
               className="input-field"
-              placeholder="sarah@company.com"
+              placeholder="alex@codehive.dev"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="off"
               required
             />
             <Mail className="input-icon" size={18} />
@@ -169,14 +171,14 @@ export const RegisterForm = () => {
               checked={agreeTerms}
               onChange={(e) => setAgreeTerms(e.target.checked)}
             />
-            <span>I agree to CodeHive <a href="#terms" className="inline-link">Terms</a> & <a href="#privacy" className="inline-link">Privacy Policy</a></span>
+            <span>I agree to CodeHive <a href="#terms" className="inline-link">Terms</a> &amp; <a href="#privacy" className="inline-link">Privacy Policy</a></span>
           </label>
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className="btn-vibrant submit-btn"
+          className="auth-submit-btn"
           disabled={submitting}
         >
           {submitting ? (
@@ -204,17 +206,87 @@ export const RegisterForm = () => {
           display: flex;
           flex-direction: column;
         }
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
         .auth-error-banner {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: rgba(239, 68, 68, 0.15);
-          border: 1px solid rgba(239, 68, 68, 0.35);
-          color: #fca5a5;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
           padding: 12px 14px;
           border-radius: 12px;
           font-size: 0.86rem;
           margin-bottom: 20px;
+        }
+        .flex-shrink-0 { flex-shrink: 0; }
+        .input-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .input-label {
+          font-size: 0.84rem;
+          font-weight: 600;
+          color: #374151;
+        }
+        .input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .input-field {
+          width: 100%;
+          background: #f9fafb;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 11px 40px 11px 38px;
+          color: #111827;
+          font-size: 0.92rem;
+          transition: all 0.18s ease;
+          outline: none;
+          font-family: inherit;
+        }
+        .input-field:focus {
+          background: #ffffff;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+        .input-field:-webkit-autofill,
+        .input-field:-webkit-autofill:hover,
+        .input-field:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0px 1000px #f9fafb inset !important;
+          -webkit-text-fill-color: #111827 !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+        .input-field::placeholder {
+          color: #9ca3af;
+        }
+        .input-icon {
+          position: absolute;
+          left: 12px;
+          color: #9ca3af;
+          pointer-events: none;
+        }
+        .input-toggle-btn {
+          position: absolute;
+          right: 12px;
+          background: none;
+          border: none;
+          color: #9ca3af;
+          cursor: pointer;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.18s;
+        }
+        .input-toggle-btn:hover {
+          color: #4b5563;
         }
         .strength-meter-container {
           display: flex;
@@ -225,7 +297,7 @@ export const RegisterForm = () => {
         .strength-bar-track {
           flex: 1;
           height: 4px;
-          background: rgba(255, 255, 255, 0.1);
+          background: #f1f5f9;
           border-radius: 2px;
           overflow: hidden;
         }
@@ -237,35 +309,83 @@ export const RegisterForm = () => {
           font-size: 0.75rem;
           font-weight: 600;
         }
+        .form-options-row {
+          display: flex;
+          align-items: center;
+          margin-top: 2px;
+        }
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.84rem;
+          color: #4b5563;
+          cursor: pointer;
+          user-select: none;
+        }
+        .custom-checkbox {
+          accent-color: #6366f1;
+          width: 16px;
+          height: 16px;
+          border-radius: 4px;
+          cursor: pointer;
+        }
         .inline-link {
-          color: var(--accent-indigo);
+          color: #6366f1;
           text-decoration: none;
+          font-weight: 500;
         }
         .inline-link:hover {
+          color: #4f46e5;
           text-decoration: underline;
         }
-        .submit-btn {
+        .auth-submit-btn {
           width: 100%;
+          background: #111827;
+          color: #ffffff;
+          border: none;
+          border-radius: 50px;
           padding: 13px;
-          font-size: 0.98rem;
+          font-size: 0.95rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.18s ease;
           margin-top: 4px;
+          font-family: inherit;
+        }
+        .auth-submit-btn:hover:not(:disabled) {
+          background: #1f2937;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(17, 24, 39, 0.2);
+        }
+        .auth-submit-btn:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        .auth-submit-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         .divider-container {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin: 24px 0 8px 0;
+          margin: 22px 0 8px 0;
         }
         .divider-line {
           flex: 1;
           height: 1px;
-          background: rgba(255, 255, 255, 0.08);
+          background: #e5e7eb;
         }
         .divider-text {
           font-size: 0.72rem;
-          color: var(--text-muted);
-          font-weight: 600;
-          letter-spacing: 0.06em;
+          color: #9ca3af;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          font-family: 'Fira Code', monospace;
         }
       `}</style>
     </div>

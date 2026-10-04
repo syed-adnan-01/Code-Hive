@@ -1,17 +1,20 @@
 import React from 'react';
 import { Keyboard, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadOnly = false }) => {
+  const { isDark } = useTheme();
+
   const handleInsertSample = () => {
     if (isReadOnly) return;
     onChangeStdin('5\n10 20 30 40 50\nTest User Input');
   };
 
   return (
-    <div className={`stdin-container ${isOpen ? 'open' : 'closed'}`}>
+    <div className={`stdin-container ${isOpen ? 'open' : 'closed'} ${isDark ? 'dark' : 'light'}`}>
       <div className="stdin-header" onClick={onToggleOpen}>
         <div className="stdin-header-title">
-          <Keyboard size={14} className="text-cyan" />
+          <Keyboard size={14} className="stdin-icon" />
           <span className="font-brand">STANDARD INPUT (STDIN)</span>
           {stdin && <span className="stdin-length-badge font-code">{stdin.length} chars</span>}
         </div>
@@ -69,33 +72,60 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
 
       <style>{`
         .stdin-container {
-          background: rgba(13, 16, 23, 0.95);
-          border-top: 1px solid var(--border-subtle);
+          background: #ffffff;
+          border-top: 1px solid #e2e8f0;
           user-select: none;
+          transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .stdin-container.dark {
+          background: #0d1017;
+          border-top-color: rgba(255, 255, 255, 0.08);
         }
         .stdin-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 6px 16px;
-          background: rgba(17, 20, 29, 0.9);
+          padding: 8px 18px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
           cursor: pointer;
           font-size: 0.76rem;
-          color: var(--text-secondary);
+          color: #475569;
+          transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .stdin-container.dark .stdin-header {
+          background: #11141d;
+          border-bottom-color: rgba(255, 255, 255, 0.08);
+          color: #94a3b8;
         }
         .stdin-header-title {
           display: flex;
           align-items: center;
           gap: 8px;
+          font-family: 'Outfit', sans-serif;
           font-weight: 700;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.05em;
+          color: #1e293b;
+        }
+        .stdin-container.dark .stdin-header-title {
+          color: #f1f5f9;
+        }
+        .stdin-icon {
+          color: #06b6d4;
         }
         .stdin-length-badge {
-          background: rgba(6, 182, 212, 0.15);
-          color: var(--accent-cyan);
-          padding: 1px 6px;
-          border-radius: 4px;
+          background: #ecfeff;
+          border: 1px solid #cffafe;
+          color: #0891b2;
+          padding: 2px 8px;
+          border-radius: 20px;
           font-size: 0.7rem;
+          font-weight: 600;
+        }
+        .stdin-container.dark .stdin-length-badge {
+          background: rgba(6, 182, 212, 0.15);
+          border-color: rgba(6, 182, 212, 0.3);
+          color: #22d3ee;
         }
         .stdin-header-actions {
           display: flex;
@@ -103,55 +133,98 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           gap: 8px;
         }
         .btn-stdin-tool {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: var(--text-secondary);
-          padding: 2px 8px;
-          border-radius: 4px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          padding: 3px 10px;
+          border-radius: 20px;
           font-size: 0.72rem;
+          font-weight: 600;
           display: flex;
           align-items: center;
           gap: 5px;
           cursor: pointer;
-          transition: background 0.15s, color 0.15s;
+          transition: all 0.15s ease;
+        }
+        .stdin-container.dark .btn-stdin-tool {
+          background: #1e293b;
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #cbd5e1;
         }
         .btn-stdin-tool:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: var(--text-primary);
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .stdin-container.dark .btn-stdin-tool:hover {
+          background: #334155;
+          color: #ffffff;
         }
         .btn-stdin-icon {
-          background: transparent;
-          border: none;
-          color: var(--text-secondary);
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
           cursor: pointer;
-          padding: 2px 4px;
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+        }
+        .stdin-container.dark .btn-stdin-icon {
+          background: #1e293b;
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #94a3b8;
+        }
+        .btn-stdin-icon:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+        }
+        .stdin-container.dark .btn-stdin-icon:hover {
+          color: #ffffff;
+          background: #334155;
         }
         .stdin-body {
-          padding: 8px 16px;
-          background: #0a0c10;
+          padding: 10px 18px;
+          background: #ffffff;
+          transition: background-color 0.2s ease;
+        }
+        .stdin-container.dark .stdin-body {
+          background: #090d16;
         }
         .stdin-textarea {
           width: 100%;
           height: 64px;
-          background: rgba(17, 20, 29, 0.8);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 6px;
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px;
           padding: 8px 12px;
-          color: #f1f5f9;
+          color: #0f172a;
           font-size: 0.82rem;
           line-height: 1.5;
           outline: none;
           resize: none;
           box-sizing: border-box;
-          transition: border-color 0.2s;
+          transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+        .stdin-container.dark .stdin-textarea {
+          background: #111827;
+          border: 1px solid #1f2937;
+          color: #f1f5f9;
         }
         .stdin-textarea:focus {
-          border-color: var(--accent-cyan);
+          border-color: #6366f1;
+        }
+        .stdin-container.dark .stdin-textarea:focus {
+          border-color: #06b6d4;
         }
         .stdin-textarea::placeholder {
-          color: var(--text-muted);
+          color: #94a3b8;
+        }
+        .stdin-container.dark .stdin-textarea::placeholder {
+          color: #64748b;
         }
       `}</style>
     </div>

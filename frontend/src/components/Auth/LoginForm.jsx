@@ -84,6 +84,7 @@ export const LoginForm = ({ onOpenResetModal }) => {
               placeholder="name@codehive.dev"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="off"
               required
             />
             <Mail className="input-icon" size={18} />
@@ -139,7 +140,7 @@ export const LoginForm = ({ onOpenResetModal }) => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="btn-vibrant submit-btn"
+          className="auth-submit-btn"
           disabled={submitting}
         >
           {submitting ? (
@@ -168,6 +169,11 @@ export const LoginForm = ({ onOpenResetModal }) => {
           display: flex;
           flex-direction: column;
         }
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
         .auth-error-banner-column {
           display: flex;
           flex-direction: column;
@@ -178,9 +184,9 @@ export const LoginForm = ({ onOpenResetModal }) => {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: rgba(239, 68, 68, 0.15);
-          border: 1px solid rgba(239, 68, 68, 0.35);
-          color: #fca5a5;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
           padding: 12px 14px;
           border-radius: 12px;
           font-size: 0.84rem;
@@ -188,9 +194,9 @@ export const LoginForm = ({ onOpenResetModal }) => {
         }
         .flex-shrink-0 { flex-shrink: 0; }
         .btn-switch-demo {
-          background: rgba(99, 102, 241, 0.2);
-          border: 1px solid rgba(99, 102, 241, 0.4);
-          color: #ffffff;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          color: #1d4ed8;
           padding: 8px 12px;
           border-radius: 8px;
           font-size: 0.82rem;
@@ -203,105 +209,196 @@ export const LoginForm = ({ onOpenResetModal }) => {
           transition: all 0.2s ease;
         }
         .btn-switch-demo:hover {
-          background: rgba(99, 102, 241, 0.35);
-          box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+          background: #dbeafe;
+          box-shadow: 0 2px 8px rgba(29, 78, 216, 0.15);
         }
         .demo-hint-banner {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: rgba(245, 158, 11, 0.1);
-          border: 1px dashed rgba(245, 158, 11, 0.35);
+          background: #fffbeb;
+          border: 1px dashed #fde68a;
           padding: 10px 14px;
           border-radius: 12px;
           margin-bottom: 20px;
           font-size: 0.82rem;
-          color: #fef08a;
+          color: #92400e;
         }
         .demo-hint-text {
           display: flex;
           align-items: center;
           gap: 8px;
+          font-weight: 500;
         }
         .text-amber {
-          color: var(--accent-amber);
+          color: #d97706;
         }
         .btn-demo-fill {
-          background: rgba(245, 158, 11, 0.2);
-          border: 1px solid rgba(245, 158, 11, 0.4);
-          color: var(--accent-amber);
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          color: #b45309;
           border-radius: 6px;
           padding: 4px 10px;
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
         }
         .btn-demo-fill:hover {
-          background: rgba(245, 158, 11, 0.35);
-          color: #ffffff;
+          background: #fde68a;
+          color: #78350f;
+        }
+        .input-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .input-label {
+          font-size: 0.84rem;
+          font-weight: 600;
+          color: #374151;
         }
         .label-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
+        .input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .input-field {
+          width: 100%;
+          background: #f9fafb;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 11px 40px 11px 38px;
+          color: #111827;
+          font-size: 0.92rem;
+          transition: all 0.18s ease;
+          outline: none;
+          font-family: inherit;
+        }
+        .input-field:focus {
+          background: #ffffff;
+          border-color: #6366f1;
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+        .input-field:-webkit-autofill,
+        .input-field:-webkit-autofill:hover,
+        .input-field:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0px 1000px #f9fafb inset !important;
+          -webkit-text-fill-color: #111827 !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+        .input-field::placeholder {
+          color: #9ca3af;
+        }
+        .input-icon {
+          position: absolute;
+          left: 12px;
+          color: #9ca3af;
+          pointer-events: none;
+        }
+        .input-toggle-btn {
+          position: absolute;
+          right: 12px;
+          background: none;
+          border: none;
+          color: #9ca3af;
+          cursor: pointer;
+          padding: 2px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.18s;
+        }
+        .input-toggle-btn:hover {
+          color: #4b5563;
+        }
         .forgot-link {
           background: none;
           border: none;
-          color: var(--accent-indigo);
+          color: #6366f1;
           font-size: 0.8rem;
           cursor: pointer;
-          font-weight: 500;
-          transition: color 0.2s ease;
+          font-weight: 600;
+          transition: color 0.18s ease;
+          padding: 0;
         }
         .forgot-link:hover {
-          color: var(--accent-purple);
+          color: #4f46e5;
           text-decoration: underline;
         }
         .form-options-row {
           display: flex;
           align-items: center;
-          margin-bottom: 22px;
+          margin-top: 2px;
         }
         .checkbox-label {
           display: flex;
           align-items: center;
           gap: 8px;
           font-size: 0.84rem;
-          color: var(--text-secondary);
+          color: #4b5563;
           cursor: pointer;
           user-select: none;
         }
         .custom-checkbox {
-          accent-color: var(--accent-indigo);
+          accent-color: #6366f1;
           width: 16px;
           height: 16px;
           border-radius: 4px;
           cursor: pointer;
         }
-        .submit-btn {
+        .auth-submit-btn {
           width: 100%;
+          background: #111827;
+          color: #ffffff;
+          border: none;
+          border-radius: 50px;
           padding: 13px;
-          font-size: 0.98rem;
+          font-size: 0.95rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.18s ease;
           margin-top: 4px;
+          font-family: inherit;
+        }
+        .auth-submit-btn:hover:not(:disabled) {
+          background: #1f2937;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(17, 24, 39, 0.2);
+        }
+        .auth-submit-btn:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        .auth-submit-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         .divider-container {
           display: flex;
           align-items: center;
           gap: 12px;
-          margin: 24px 0 8px 0;
+          margin: 22px 0 8px 0;
         }
         .divider-line {
           flex: 1;
           height: 1px;
-          background: rgba(255, 255, 255, 0.08);
+          background: #e5e7eb;
         }
         .divider-text {
           font-size: 0.72rem;
-          color: var(--text-muted);
-          font-weight: 600;
-          letter-spacing: 0.06em;
+          color: #9ca3af;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          font-family: 'Fira Code', monospace;
         }
       `}</style>
     </div>

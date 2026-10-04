@@ -32,7 +32,7 @@ export const SocialAuth = () => {
         type="button"
         onClick={handleGoogleSignIn}
         disabled={loading}
-        className="btn-secondary google-btn"
+        className="google-btn"
       >
         <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20">
           <path
@@ -60,23 +60,38 @@ export const SocialAuth = () => {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          margin-top: 16px;
+          margin-top: 14px;
         }
         .google-btn {
           width: 100%;
-          border-radius: 12px;
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          color: var(--text-primary);
+          border-radius: 50px;
+          padding: 12px 20px;
+          background: #ffffff;
+          border: 1.5px solid #e5e7eb;
+          color: #374151;
           font-weight: 600;
           font-size: 0.92rem;
-          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          font-family: inherit;
         }
-        .google-btn:hover {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(99, 102, 241, 0.4);
-          box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+        .google-btn:hover:not(:disabled) {
+          background: #f9fafb;
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+          color: #111827;
+        }
+        .google-btn:active:not(:disabled) {
+          transform: scale(0.98);
+        }
+        .google-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         .google-icon {
           flex-shrink: 0;
@@ -85,9 +100,9 @@ export const SocialAuth = () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          background: rgba(239, 68, 68, 0.15);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          color: #fca5a5;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
           padding: 8px 12px;
           border-radius: 8px;
           font-size: 0.82rem;
