@@ -336,8 +336,8 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           overflow: hidden;
         }
         .chat-panel-root.dark {
-          background: #0d1117;
-          color: #f0f6fc;
+          background: #252526;
+          color: #cccccc;
         }
         .chat-panel-header {
           padding: 12px 16px;
@@ -348,8 +348,8 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           background: #f8fafc;
         }
         .chat-panel-root.dark .chat-panel-header {
-          background: #090d16;
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-bottom-color: #2b2b2b;
         }
         .chat-header-info {
           display: flex;
@@ -424,7 +424,7 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           width: 28px;
           height: 28px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           color: white;
           font-size: 0.75rem;
           font-weight: 700;
@@ -471,8 +471,9 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           border-bottom-left-radius: 3px;
         }
         .chat-panel-root.dark .bubble-peer {
-          background: #1e293b;
-          color: #f1f5f9;
+          background: #1e1e1e;
+          border: 1px solid #2b2b2b;
+          color: #cccccc;
         }
         .message-plain-text {
           user-select: text;
@@ -509,8 +510,8 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           background: #f8fafc;
         }
         .chat-panel-root.dark .chat-input-form {
-          background: #090d16;
-          border-top-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-top-color: #2b2b2b;
         }
         .chat-input-wrapper {
           border: 1px solid #cbd5e1;
@@ -520,11 +521,11 @@ export const ChatPanel = ({ roomId, userRole = 'editor', onOpenRoomModal }) => {
           transition: border-color 0.15s;
         }
         .chat-panel-root.dark .chat-input-wrapper {
-          background: #161b22;
-          border-color: rgba(255, 255, 255, 0.12);
+          background: #252526;
+          border-color: #333333;
         }
         .chat-input-wrapper:focus-within {
-          border-color: #6366f1;
+          border-color: #007acc;
         }
         .chat-textarea {
           width: 100%;

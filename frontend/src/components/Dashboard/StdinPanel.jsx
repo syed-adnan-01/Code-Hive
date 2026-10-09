@@ -78,8 +78,8 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: background-color 0.2s ease, border-color 0.2s ease;
         }
         .stdin-container.dark {
-          background: #0d1017;
-          border-top-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-top-color: #2b2b2b;
         }
         .stdin-header {
           display: flex;
@@ -94,8 +94,8 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: background-color 0.2s ease, border-color 0.2s ease;
         }
         .stdin-container.dark .stdin-header {
-          background: #11141d;
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-bottom-color: #2b2b2b;
           color: #94a3b8;
         }
         .stdin-header-title {
@@ -147,9 +147,9 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: all 0.15s ease;
         }
         .stdin-container.dark .btn-stdin-tool {
-          background: #1e293b;
-          border-color: rgba(255, 255, 255, 0.1);
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .btn-stdin-tool:hover {
           background: #f1f5f9;
@@ -157,7 +157,8 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           border-color: #cbd5e1;
         }
         .stdin-container.dark .btn-stdin-tool:hover {
-          background: #334155;
+          background: #2d2d2d;
+          border-color: #3e3e42;
           color: #ffffff;
         }
         .btn-stdin-icon {
@@ -174,9 +175,9 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: all 0.15s ease;
         }
         .stdin-container.dark .btn-stdin-icon {
-          background: #1e293b;
-          border-color: rgba(255, 255, 255, 0.1);
-          color: #94a3b8;
+          background: #252526;
+          border-color: #333333;
+          color: #858585;
         }
         .btn-stdin-icon:hover {
           color: #0f172a;
@@ -184,7 +185,8 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
         }
         .stdin-container.dark .btn-stdin-icon:hover {
           color: #ffffff;
-          background: #334155;
+          background: #2d2d2d;
+          border-color: #3e3e42;
         }
         .stdin-body {
           padding: 10px 18px;
@@ -192,7 +194,7 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: background-color 0.2s ease;
         }
         .stdin-container.dark .stdin-body {
-          background: #090d16;
+          background: #1e1e1e;
         }
         .stdin-textarea {
           width: 100%;
@@ -210,21 +212,21 @@ export const StdinPanel = ({ stdin, onChangeStdin, isOpen, onToggleOpen, isReadO
           transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
         }
         .stdin-container.dark .stdin-textarea {
-          background: #111827;
-          border: 1px solid #1f2937;
-          color: #f1f5f9;
+          background: #252526;
+          border: 1px solid #333333;
+          color: #d4d4d4;
         }
         .stdin-textarea:focus {
           border-color: #6366f1;
         }
         .stdin-container.dark .stdin-textarea:focus {
-          border-color: #06b6d4;
+          border-color: #007acc;
         }
         .stdin-textarea::placeholder {
           color: #94a3b8;
         }
         .stdin-container.dark .stdin-textarea::placeholder {
-          color: #64748b;
+          color: #858585;
         }
       `}</style>
     </div>

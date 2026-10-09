@@ -35,7 +35,7 @@ export const Navbar = () => {
         <div className="brand-logo">
           <div className="logo-icon-hex">
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#a855f7" strokeWidth="1.5" />
+              <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#38bdf8" strokeWidth="1.5" />
               <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="white" fillOpacity="0.25" />
             </svg>
           </div>
@@ -185,7 +185,7 @@ export const Navbar = () => {
         .logo-icon-hex {
           width: 36px;
           height: 36px;
-          background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+          background: linear-gradient(135deg, #e0e7ff, #e0f2fe);
           border-radius: 10px;
           display: flex;
           align-items: center;
@@ -304,7 +304,7 @@ export const Navbar = () => {
           width: 28px;
           height: 28px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           color: #ffffff;
           font-size: 0.78rem;
           font-weight: 700;
@@ -359,7 +359,7 @@ export const Navbar = () => {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           color: #ffffff;
           font-size: 0.9rem;
           font-weight: 700;
@@ -461,40 +461,59 @@ export const Navbar = () => {
 
         /* ── Dark Mode Navbar Overrides ── */
         .navbar-header.dark {
-          background: rgba(13, 18, 31, 0.96);
-          border-bottom-color: #1e293b;
+          background: #181818;
+          border-bottom: 1px solid #2b2b2b;
         }
         .navbar-header.dark .brand-name {
           color: #f8fafc;
         }
+        .navbar-header.dark .brand-badge {
+          background: #252526;
+          border: 1px solid #333333;
+          color: #007acc;
+        }
         .navbar-header.dark .logo-icon-hex {
-          background: linear-gradient(135deg, #1e1b4b, #2e1065);
+          background: #252526;
+          border: 1px solid #333333;
+        }
+        .navbar-header.dark .badge-live {
+          background: rgba(16, 185, 129, 0.12);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          color: #34d399;
+        }
+        .navbar-header.dark .badge-demo {
+          background: rgba(245, 158, 11, 0.12);
+          border: 1px solid rgba(245, 158, 11, 0.3);
+          color: #fbbf24;
         }
         .navbar-header.dark .nav-docs-link {
-          background: #111827;
-          border-color: #1f2937;
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .navbar-header.dark .nav-docs-link:hover {
-          border-color: #6366f1;
-          color: #818cf8;
+          border-color: #007acc;
+          background: #2d2d2d;
+          color: #ffffff;
         }
         .navbar-header.dark .nav-theme-toggle-btn {
-          background: #111827;
-          border-color: #1f2937;
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .navbar-header.dark .nav-theme-toggle-btn:hover {
-          border-color: #6366f1;
-          color: #f8fafc;
+          border-color: #007acc;
+          background: #2d2d2d;
+          color: #ffffff;
         }
         .navbar-header.dark .nav-user-btn {
-          background: #111827;
-          border-color: #1f2937;
+          background: #252526;
+          border-color: #333333;
           color: #f1f5f9;
         }
         .navbar-header.dark .nav-user-btn:hover {
-          border-color: #6366f1;
+          border-color: #007acc;
+          background: #2d2d2d;
         }
         .navbar-header.dark .nav-display-name {
           color: #f1f5f9;
@@ -503,9 +522,9 @@ export const Navbar = () => {
           color: #94a3b8;
         }
         .navbar-header.dark .nav-dropdown {
-          background: #0d121f;
-          border-color: #1e293b;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+          background: #252526;
+          border: 1px solid #333333;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
         }
         .navbar-header.dark .nav-dropdown-name {
           color: #f8fafc;
@@ -514,18 +533,18 @@ export const Navbar = () => {
           color: #94a3b8;
         }
         .navbar-header.dark .nav-dropdown-divider {
-          background: #1e293b;
+          background: #2b2b2b;
         }
         .navbar-header.dark .nav-dropdown-item {
           color: #cbd5e1;
         }
         .navbar-header.dark .nav-dropdown-item:hover {
-          background: rgba(99, 102, 241, 0.15);
+          background: #2d2d2d;
           color: #ffffff;
         }
         .navbar-header.dark .nav-theme-toggle-item:hover {
-          background: rgba(99, 102, 241, 0.15);
-          color: #818cf8;
+          background: #2d2d2d;
+          color: #007acc;
         }
         .navbar-header.dark .nav-logout-item {
           color: #f87171;

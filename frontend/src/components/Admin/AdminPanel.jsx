@@ -886,7 +886,7 @@ export const AdminPanel = ({ onClose }) => {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           color: white;
           font-weight: 700;
           display: flex;

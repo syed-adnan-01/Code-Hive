@@ -98,7 +98,7 @@ const LANGS = [
   { name: 'Java',       color: '#f97316', bg: '#ffedd5' },
   { name: 'TypeScript', color: '#6366f1', bg: '#e0e7ff' },
   { name: 'Go',         color: '#06b6d4', bg: '#cffafe' },
-  { name: 'Rust',       color: '#a855f7', bg: '#f3e8ff' },
+  { name: 'Rust',       color: '#ea580c', bg: '#ffedd5' },
 ];
 
 /* ─────────────────────────────────────────────
@@ -275,9 +275,9 @@ const HeroSection = ({ onGetStarted, onLogin }) => {
           <ShapeTriangle color="#6366f1" size={48} style={{ transform: 'rotate(180deg)' }} />
         </FloatingShape>
 
-        {/* Purple pill — bottom-left */}
+        {/* Blue pill — bottom-left */}
         <FloatingShape {...fs({ position:'absolute', bottom:'35%', left:'18%'  }, 420, { x:-200, y: 120 })}>
-          <ShapeRect color="#a855f7" w={110} h={52} radius={26} />
+          <ShapeRect color="#3b82f6" w={110} h={52} radius={26} />
         </FloatingShape>
 
         {/* Cyan half-circle — bottom */}
@@ -404,7 +404,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
           <a href="#" className="lp-logo">
             <div className="lp-logo-hex">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#a855f7" strokeWidth="1.5" />
+                <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#38bdf8" strokeWidth="1.5" />
                 <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="white" fillOpacity="0.25" />
               </svg>
             </div>
@@ -549,7 +549,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
                 <ShapeCircle color="#06b6d4" size={64} style={{ position: 'absolute', top: 10, right: 40, opacity: 0.7 }} />
                 <ShapeTriangle color="#6366f1" size={50} style={{ position: 'absolute', bottom: 20, right: 80, transform: 'rotate(30deg)' }} />
                 <ShapeRect color="#f59e0b" w={80} h={36} radius={18} style={{ position: 'absolute', top: 60, right: 20 }} />
-                <ShapeHalf color="#a855f7" size={60} style={{ position: 'absolute', bottom: 10, right: 150 }} />
+                <ShapeHalf color="#3b82f6" size={60} style={{ position: 'absolute', bottom: 10, right: 150 }} />
                 <div className="lp-mini-terminal">
                   <div className="lp-mini-terminal-bar">
                     <span />
@@ -687,7 +687,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
             <div className="lp-logo">
               <div className="lp-logo-hex">
                 <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
-                  <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#a855f7" strokeWidth="1.5" />
+                  <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#38bdf8" strokeWidth="1.5" />
                 </svg>
               </div>
               <span className="lp-logo-name">Code<span className="lp-logo-accent">Hive</span></span>
@@ -753,7 +753,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
         }
         .lp-logo-hex {
           width: 36px; height: 36px;
-          background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+          background: linear-gradient(135deg, #e0e7ff, #e0f2fe);
           border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
         }
@@ -1032,7 +1032,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
           position: absolute;
           width: 420px; height: 420px;
           border-radius: 50%;
-          background: radial-gradient(circle, #e0e7ff 0%, #f3e8ff 60%, transparent 100%);
+          background: radial-gradient(circle, #e0e7ff 0%, #e0f2fe 60%, transparent 100%);
           top: 50%; left: 50%;
           transform: translate(-50%, -50%);
           animation: lp-blob-breathe 7s ease-in-out infinite;
@@ -1458,7 +1458,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
 
         /* ── CTA BANNER ── */
         .lp-cta-banner {
-          background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+          background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%);
           padding: 100px 24px;
           text-align: center;
           position: relative;
@@ -1743,7 +1743,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
           color: #f8fafc;
         }
         .lp-root.dark .lp-logo-hex {
-          background: linear-gradient(135deg, #1e1b4b, #2e1065);
+          background: linear-gradient(135deg, #1e1b4b, #172554);
         }
         .lp-root.dark .lp-nav-links a {
           color: #94a3b8;
@@ -1802,7 +1802,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
           color: #64748b;
         }
         .lp-root.dark .lp-hero-blob {
-          background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.08) 50%, transparent 70%);
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.08) 50%, transparent 70%);
         }
         .lp-root.dark .lp-stats-bar {
           background: #0d121f;

@@ -424,62 +424,62 @@ export const RoomModal = ({ isOpen, onClose, onCreateRoom, onJoinRoom, loading }
 
         /* ── Dark Mode Room Modal ── */
         .room-modal-card.dark {
-          background: #0f172a;
-          border-color: #1e293b;
-          color: #f1f5f9;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
           box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
         .room-modal-card.dark .room-modal-title {
           color: #f8fafc;
         }
         .room-modal-card.dark .room-modal-subtitle {
-          color: #94a3b8;
+          color: #858585;
         }
         .room-modal-card.dark .btn-close-modal {
-          background: #1e293b;
-          border-color: #334155;
-          color: #94a3b8;
+          background: #1e1e1e;
+          border-color: #333333;
+          color: #858585;
         }
         .room-modal-card.dark .btn-close-modal:hover {
           color: #ffffff;
-          background: #334155;
+          background: #2d2d2d;
         }
         .room-modal-card.dark .modal-tab-switcher {
-          background: #1e293b;
-          border-color: #334155;
+          background: #1e1e1e;
+          border-color: #333333;
         }
         .room-modal-card.dark .modal-tab-btn {
-          color: #94a3b8;
+          color: #858585;
         }
         .room-modal-card.dark .modal-tab-btn.active {
-          background: #0f172a;
-          color: #818cf8;
+          background: #252526;
+          color: #007acc;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
         .room-modal-card.dark .form-label {
-          color: #cbd5e1;
+          color: #cccccc;
         }
         .room-modal-card.dark .form-input,
         .room-modal-card.dark .form-select {
-          background: #1e293b;
-          border-color: #334155;
+          background: #1e1e1e;
+          border-color: #333333;
           color: #f8fafc;
         }
         .room-modal-card.dark .form-input:focus,
         .room-modal-card.dark .form-select:focus {
-          border-color: #6366f1;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+          border-color: #007acc;
+          box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.25);
         }
         .room-modal-card.dark .form-hint {
-          color: #94a3b8;
+          color: #858585;
         }
         .room-modal-card.dark .access-option {
-          background: #1e293b;
-          border-color: #334155;
+          background: #1e1e1e;
+          border-color: #333333;
         }
         .room-modal-card.dark .access-option.selected {
-          border-color: #6366f1;
-          background: rgba(99, 102, 241, 0.15);
+          border-color: #007acc;
+          background: rgba(0, 122, 204, 0.15);
         }
         .room-modal-card.dark .option-title {
           color: #f8fafc;

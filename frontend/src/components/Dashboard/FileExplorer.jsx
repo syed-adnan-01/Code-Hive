@@ -510,8 +510,8 @@ export const FileExplorer = ({
         /* Dark Mode */
         .file-explorer-sidebar.dark,
         .workspace-container.dark .file-explorer-sidebar {
-          background: #0d121f;
-          color: #f1f5f9;
+          background: #252526;
+          color: #cccccc;
         }
 
         .explorer-header {
@@ -525,7 +525,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .explorer-header,
         .workspace-container.dark .explorer-header {
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          border-bottom-color: #2b2b2b;
         }
 
         .explorer-title-box {
@@ -541,7 +541,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .explorer-title,
         .workspace-container.dark .explorer-title {
-          color: #94a3b8;
+          color: #858585;
         }
 
         .file-badge-count {
@@ -555,9 +555,9 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .file-badge-count,
         .workspace-container.dark .file-badge-count {
-          background: rgba(255, 255, 255, 0.08);
-          color: #cbd5e1;
-          border-color: rgba(255, 255, 255, 0.05);
+          background: #1e1e1e;
+          color: #cccccc;
+          border-color: #333333;
         }
 
         .explorer-header-actions {
@@ -579,7 +579,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .btn-icon-sm,
         .workspace-container.dark .btn-icon-sm {
-          color: #94a3b8;
+          color: #858585;
         }
         .file-explorer-sidebar.light .btn-icon-sm:hover:not(:disabled),
         .workspace-container.light .btn-icon-sm:hover:not(:disabled) {
@@ -588,8 +588,8 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .btn-icon-sm:hover:not(:disabled),
         .workspace-container.dark .btn-icon-sm:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.1);
-          color: #38bdf8;
+          background: #2a2d2e;
+          color: #ffffff;
         }
         .btn-icon-sm:disabled {
           opacity: 0.35;
@@ -630,7 +630,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .folder-header,
         .workspace-container.dark .folder-header {
-          color: #e2e8f0;
+          color: #cccccc;
         }
         .file-explorer-sidebar.light .folder-header:hover,
         .workspace-container.light .folder-header:hover {
@@ -639,7 +639,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .folder-header:hover,
         .workspace-container.dark .folder-header:hover {
-          background: rgba(255, 255, 255, 0.05);
+          background: #2a2d2e;
           color: #ffffff;
         }
         .folder-icon {
@@ -673,7 +673,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .file-item,
         .workspace-container.dark .file-item {
-          color: #94a3b8;
+          color: #cccccc;
         }
         .file-item-left {
           display: flex;
@@ -689,8 +689,8 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .file-item:hover:not(.active),
         .workspace-container.dark .file-item:hover:not(.active) {
-          background: rgba(255, 255, 255, 0.05);
-          color: #f8fafc;
+          background: #2a2d2e;
+          color: #ffffff;
         }
 
         /* Active File Item - Light Mode (High Contrast & Clean Indigo Theme) */
@@ -715,10 +715,10 @@ export const FileExplorer = ({
         /* Active File Item - Dark Mode */
         .file-explorer-sidebar.dark .file-item.active,
         .workspace-container.dark .file-item.active {
-          background: rgba(99, 102, 241, 0.22);
+          background: #37373d;
           color: #ffffff !important;
           font-weight: 600;
-          border-left: 3px solid #818cf8;
+          border-left: 3px solid #007acc;
         }
         .file-explorer-sidebar.dark .file-item.active .file-name,
         .workspace-container.dark .file-item.active .file-name {
@@ -802,8 +802,8 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .rename-input,
         .workspace-container.dark .rename-input {
-          background: #111827;
-          border-color: #818cf8;
+          background: #1e1e1e;
+          border-color: #007acc;
           color: #ffffff;
           box-shadow: none;
         }
@@ -820,7 +820,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .btn-icon-micro,
         .workspace-container.dark .btn-icon-micro {
-          color: #94a3b8;
+          color: #858585;
         }
 
         .new-file-form {
@@ -836,8 +836,8 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .new-file-form,
         .workspace-container.dark .new-file-form {
-          background: #111827;
-          border-color: #818cf8;
+          background: #1e1e1e;
+          border-color: #007acc;
           box-shadow: none;
         }
 
@@ -871,7 +871,7 @@ export const FileExplorer = ({
         }
         .file-explorer-sidebar.dark .delete-confirm-popover,
         .workspace-container.dark .delete-confirm-popover {
-          background: #111827;
+          background: #252526;
           border-color: rgba(239, 68, 68, 0.4);
           box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }

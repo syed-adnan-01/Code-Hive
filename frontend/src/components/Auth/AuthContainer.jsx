@@ -164,7 +164,7 @@ export const AuthContainer = () => {
           width: 480px;
           height: 480px;
           border-radius: 50%;
-          background: radial-gradient(circle, #e0e7ff 0%, #f3e8ff 50%, transparent 80%);
+          background: radial-gradient(circle, #e0e7ff 0%, #e0f2fe 50%, transparent 80%);
           top: 15%;
           left: -100px;
           opacity: 0.7;
@@ -317,7 +317,7 @@ export const AuthContainer = () => {
           width: 48px;
           height: 48px;
           border-radius: 14px;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           display: flex;
           align-items: center;
           justify-content: center;

@@ -1541,8 +1541,8 @@ export const WorkspacePreview = () => {
           border-radius: 50px;
         }
         .room-active {
-          border-color: #d8b4fe;
-          background: #f3e8ff;
+          border-color: #93c5fd;
+          background: #eff6ff;
         }
         .solo-badge {
           background: #f8fafc;
@@ -1578,7 +1578,7 @@ export const WorkspacePreview = () => {
           color: #0f172a;
         }
         .room-active .room-name {
-          color: #6b21a8;
+          color: #1d4ed8;
         }
         .room-id-tag {
           font-size: 0.72rem;
@@ -1599,9 +1599,9 @@ export const WorkspacePreview = () => {
           letter-spacing: 0.04em;
         }
         .role-owner {
-          background: #f3e8ff;
-          color: #7c3aed;
-          border: 1px solid #d8b4fe;
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid #bfdbfe;
         }
         .role-editor {
           background: #ecfdf5;
@@ -1962,7 +1962,7 @@ export const WorkspacePreview = () => {
           color: #ffffff;
         }
         .avatar-you {
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: linear-gradient(135deg, #6366f1, #3b82f6);
           box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
         }
         .peer-badge-dot {
@@ -2454,7 +2454,7 @@ export const WorkspacePreview = () => {
           min-width: 0;
         }
         .workspace-container.dark .editor-central-column {
-          background: #0a0c10;
+          background: #1e1e1e;
         }
         .viewer-warning-banner {
           background: #fffbeb;
@@ -2614,98 +2614,141 @@ export const WorkspacePreview = () => {
 
         /* ── Dark Mode Workspace Theme Overrides ── */
         .workspace-container.dark {
-          background: #090d16;
-          color: #f1f5f9;
+          background: #181818;
+          color: #cccccc;
         }
         .workspace-header.dark {
-          background: #0d121f;
-          border-bottom: 1px solid #1e293b;
+          background: #1f1f1f;
+          border-bottom: 1px solid #2b2b2b;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
         .workspace-container.dark .room-badge {
-          background: #111827;
-          border-color: #1f2937;
-          color: #f3f4f6;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .room-active {
-          background: rgba(168, 85, 247, 0.15);
-          border-color: rgba(168, 85, 247, 0.4);
+          background: rgba(0, 122, 204, 0.15);
+          border-color: rgba(0, 122, 204, 0.4);
         }
         .workspace-container.dark .solo-badge {
-          background: #111827;
-          border-color: #1f2937;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .avatar-pill {
-          border-color: #0d121f;
+          border-color: #252526;
         }
         .workspace-container.dark .peer-badge-dot {
-          border-color: #0d121f;
+          border-color: #252526;
         }
         .workspace-container.dark .room-name {
           color: #f8fafc;
         }
         .workspace-container.dark .room-id-tag {
-          background: #1e293b;
+          background: #1e1e1e;
+          border: 1px solid #333333;
           color: #94a3b8;
         }
         .workspace-container.dark .btn-language-selector {
-          background: #111827;
-          border-color: #1f2937;
-          color: #f1f5f9;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .btn-language-selector:hover {
-          border-color: #6366f1;
-          background: #1e293b;
+          border-color: #007acc;
+          background: #2d2d2d;
+          color: #ffffff;
         }
         .workspace-container.dark .language-dropdown-menu {
-          background: #0d121f;
-          border-color: #1e293b;
+          background: #252526;
+          border-color: #333333;
           box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
         }
         .workspace-container.dark .dropdown-label {
           color: #94a3b8;
-          border-bottom-color: #1e293b;
+          border-bottom-color: #2b2b2b;
         }
         .workspace-container.dark .language-menu-item {
-          color: #cbd5e1;
+          color: #cccccc;
         }
         .workspace-container.dark .language-menu-item:hover {
-          background: rgba(99, 102, 241, 0.15);
+          background: #2d2d2d;
           color: #ffffff;
         }
         .workspace-container.dark .language-menu-item.active {
-          background: rgba(99, 102, 241, 0.25);
-          color: #818cf8;
+          background: #37373d;
+          color: #ffffff;
+          border-left: 2px solid #007acc;
         }
         .workspace-container.dark .lang-id-badge {
-          background: #1e293b;
-          color: #64748b;
+          background: #1e1e1e;
+          border: 1px solid #333333;
+          color: #858585;
         }
         .workspace-container.dark .btn-template-switch {
-          background: #111827;
-          border-color: #1f2937;
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .btn-template-switch:hover {
-          border-color: #6366f1;
+          border-color: #007acc;
+          background: #2d2d2d;
           color: #ffffff;
         }
         .workspace-container.dark .btn-stdin-toggle {
-          background: #111827;
-          border-color: #1f2937;
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .btn-stdin-toggle:hover {
-          border-color: #6366f1;
+          border-color: #007acc;
+          background: #2d2d2d;
+          color: #ffffff;
         }
         .workspace-container.dark .btn-stdin-toggle.active {
-          background: rgba(99, 102, 241, 0.2);
-          border-color: #6366f1;
-          color: #818cf8;
+          background: #264f78;
+          border-color: #007acc;
+          color: #ffffff;
+        }
+        .workspace-container.dark .btn-ai-toggle {
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
+        }
+        .workspace-container.dark .btn-ai-toggle:hover {
+          background: #2d2d2d;
+          border-color: #3e3e42;
+          color: #ffffff;
+        }
+        .workspace-container.dark .btn-ai-toggle.active {
+          background: rgba(245, 158, 11, 0.15);
+          border-color: rgba(245, 158, 11, 0.4);
+          color: #fbbf24;
+          box-shadow: none;
+        }
+        .workspace-container.dark .btn-ai-toggle.active:hover {
+          background: rgba(245, 158, 11, 0.25);
+          border-color: rgba(245, 158, 11, 0.6);
+        }
+        .workspace-container.dark .btn-call-toggle {
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
+        }
+        .workspace-container.dark .btn-call-toggle:hover {
+          background: #2d2d2d;
+          border-color: #3e3e42;
+          color: #ffffff;
+        }
+        .workspace-container.dark .btn-call-toggle.active {
+          background: rgba(16, 185, 129, 0.15);
+          border-color: rgba(16, 185, 129, 0.4);
+          color: #34d399;
         }
         .workspace-container.dark .btn-open-rooms,
         .workspace-container.dark .btn-share-room {
-          background: #4f46e5;
+          background: #007acc;
           color: #ffffff;
           border: none;
         }
@@ -2716,128 +2759,145 @@ export const WorkspacePreview = () => {
         }
         .workspace-container.dark .btn-open-rooms:hover,
         .workspace-container.dark .btn-share-room:hover {
-          background: #4338ca;
-          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+          background: #0062a3;
+          box-shadow: 0 4px 14px rgba(0, 122, 204, 0.4);
         }
         .workspace-container.dark .btn-leave-room:hover {
           background: rgba(239, 68, 68, 0.25);
           border-color: rgba(239, 68, 68, 0.5);
         }
         .workspace-container.dark .workspace-sidebar {
-          background: #0d121f;
-          border-right-color: #1e293b;
+          background: #181818;
+          border-right-color: #2b2b2b;
+        }
+        .workspace-container.dark .sidebar-icons {
+          border-right-color: #2b2b2b;
         }
         .workspace-container.dark .sidebar-tab-btn {
-          color: #94a3b8;
+          color: #858585;
         }
         .workspace-container.dark .sidebar-tab-btn:hover {
-          background: #1e293b;
-          color: #f8fafc;
+          background: #2a2d2e;
+          color: #ffffff;
         }
         .workspace-container.dark .sidebar-tab-btn.active {
-          background: rgba(99, 102, 241, 0.2);
-          color: #818cf8;
+          background: #252526;
+          color: #ffffff;
+          border-left: 2px solid #007acc;
+          border-radius: 4px;
         }
         .workspace-container.dark .sidebar-drawer-panel {
-          background: #0d121f;
-          border-right-color: #1e293b;
-          color: #e2e8f0;
+          background: #252526;
+          border-right-color: #2b2b2b;
+          color: #cccccc;
         }
         .workspace-container.dark .drawer-header {
-          border-bottom-color: #1e293b;
+          border-bottom-color: #2b2b2b;
         }
         .workspace-container.dark .drawer-title {
-          color: #f8fafc;
+          color: #ffffff;
         }
         .workspace-container.dark .drawer-desc {
-          color: #94a3b8;
+          color: #858585;
         }
         .workspace-container.dark .template-card,
         .workspace-container.dark .history-card {
-          background: #111827;
-          border-color: #1f2937;
+          background: #252526;
+          border-color: #333333;
         }
         .workspace-container.dark .template-card:hover,
         .workspace-container.dark .history-card:hover {
-          border-color: #6366f1;
-          background: #161f30;
+          border-color: #007acc;
+          background: #2a2d2e;
         }
         .workspace-container.dark .template-card.active {
-          background: rgba(99, 102, 241, 0.18);
-          border-color: #818cf8;
+          background: #37373d;
+          border-color: #007acc;
         }
         .workspace-container.dark .template-card-name,
         .workspace-container.dark .history-lang {
-          color: #f8fafc !important;
+          color: #ffffff !important;
         }
         .workspace-container.dark .history-meta {
-          color: #94a3b8;
+          color: #858585;
         }
         .workspace-container.dark .btn-mini {
-          background: #1e293b;
-          border-color: rgba(255, 255, 255, 0.12);
-          color: #f1f5f9;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
         .workspace-container.dark .btn-mini:hover {
-          background: #334155;
+          background: #2d2d2d;
           color: #ffffff;
-          border-color: #818cf8;
+          border-color: #007acc;
         }
         .workspace-container.dark .refresh-history-btn,
         .workspace-container.dark .test-api-btn {
-          background: #1e293b;
-          border: 1px solid #334155;
-          color: #f8fafc;
+          background: #252526;
+          border: 1px solid #333333;
+          color: #ffffff;
         }
         .workspace-container.dark .refresh-history-btn:hover:not(:disabled),
         .workspace-container.dark .test-api-btn:hover:not(:disabled) {
-          background: #6366f1;
+          background: #007acc;
+          border-color: #007acc;
           color: #ffffff;
         }
         .workspace-container.dark .history-empty {
-          color: #94a3b8;
+          color: #858585;
+        }
+        .workspace-container.dark .api-response-box {
+          background: #181818;
+          border: 1px solid #2b2b2b;
+          color: #38bdf8;
+        }
+        .workspace-container.dark .viewer-warning-banner {
+          background: #2a2415;
+          border-bottom: 1px solid #4d3810;
+          color: #fbbf24;
         }
         .workspace-container.dark .workspace-tabs-bar {
-          background: #0d121f;
-          border-bottom-color: #1e293b;
+          background: #252526;
+          border-bottom-color: #1e1e1e;
         }
         .workspace-container.dark .editor-tab {
-          background: #141c2e;
-          color: #94a3b8;
+          background: #2d2d2d;
+          color: #969696;
+          border-right: 1px solid #252526;
         }
         .workspace-container.dark .editor-tab:hover {
-          background: #1e293b;
-          color: #f8fafc;
+          background: #272727;
+          color: #e0e0e0;
         }
         .workspace-container.dark .editor-tab.active {
-          background: #0a0c10;
-          color: #f8fafc;
-          border-top-color: #06b6d4;
+          background: #1e1e1e;
+          color: #ffffff;
+          border-top-color: #007acc;
         }
         .workspace-container.dark .tab-add-btn {
-          border-color: #334155;
-          color: #94a3b8;
+          border-color: #3e3e42;
+          color: #969696;
         }
         .workspace-container.dark .tab-add-btn:hover {
-          border-color: #06b6d4;
-          color: #06b6d4;
-          background: rgba(6, 182, 212, 0.08);
+          border-color: #007acc;
+          color: #007acc;
+          background: rgba(0, 122, 204, 0.12);
         }
         .workspace-container.dark .editor-status-bar {
-          background: #0d121f;
-          border-top-color: #1e293b;
-          color: #94a3b8;
+          background: #181818;
+          border-top-color: #2b2b2b;
+          color: #858585;
         }
         .workspace-container.dark .bar-separator {
-          color: #334155;
+          color: #3e3e42;
         }
         .workspace-container.dark .kbd-shortcut-hint {
-          color: #94a3b8;
+          color: #858585;
         }
         .workspace-container.dark .kbd-shortcut-hint kbd {
-          background: #1e293b;
-          border-color: #334155;
-          color: #cbd5e1;
+          background: #252526;
+          border-color: #333333;
+          color: #cccccc;
         }
 
         /* ── Responsive Adaptations for Screen Resizing ── */

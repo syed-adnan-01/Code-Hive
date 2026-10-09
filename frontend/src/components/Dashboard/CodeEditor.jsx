@@ -27,28 +27,28 @@ export const CodeEditor = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // 1. Define CodeHive customized dark theme
+    // 1. Define CodeHive customized dark theme (VS Code light-black #1e1e1e)
     monaco.editor.defineTheme('codehive-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
-        { token: 'keyword', foreground: 'a855f7', fontStyle: 'bold' },
-        { token: 'string', foreground: '10b981' },
-        { token: 'number', foreground: 'f59e0b' },
-        { token: 'type', foreground: '06b6d4' },
-        { token: 'function', foreground: '6366f1' },
+        { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '569cd6', fontStyle: 'bold' },
+        { token: 'string', foreground: 'ce9178' },
+        { token: 'number', foreground: 'b5cea8' },
+        { token: 'type', foreground: '4ec9b0' },
+        { token: 'function', foreground: 'dcdcaa' },
       ],
       colors: {
-        'editor.background': '#0a0c10',
-        'editor.foreground': '#f8fafc',
+        'editor.background': '#1e1e1e',
+        'editor.foreground': '#d4d4d4',
         'editorCursor.foreground': '#06b6d4',
-        'editor.lineHighlightBackground': '#14182455',
-        'editorLineNumber.foreground': '#475569',
-        'editorLineNumber.activeForeground': '#06b6d4',
-        'editor.selectionBackground': '#6366f133',
-        'editor.inactiveSelectionBackground': '#6366f120',
-        'editorGutter.background': '#0a0c10',
+        'editor.lineHighlightBackground': '#282828',
+        'editorLineNumber.foreground': '#858585',
+        'editorLineNumber.activeForeground': '#c6c6c6',
+        'editor.selectionBackground': '#264f78',
+        'editor.inactiveSelectionBackground': '#3a3d41',
+        'editorGutter.background': '#1e1e1e',
       },
     });
 
@@ -277,7 +277,7 @@ export const CodeEditor = ({
           transition: background-color 0.2s ease;
         }
         .monaco-editor-container.dark {
-          background: #0a0c10;
+          background: #1e1e1e;
         }
         .monaco-loading-spinner {
           height: 100%;
@@ -291,7 +291,7 @@ export const CodeEditor = ({
           background: #ffffff;
         }
         .monaco-editor-container.dark .monaco-loading-spinner {
-          background: #0a0c10;
+          background: #1e1e1e;
           color: #94a3b8;
         }
         .monaco-spin-icon {

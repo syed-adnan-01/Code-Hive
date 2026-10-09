@@ -180,8 +180,8 @@ export const AiDebugModal = ({
           border: 1px solid #e2e8f0;
         }
         .ai-modal-overlay.dark .ai-modal-card {
-          background: #0d1117;
-          border-color: rgba(255, 255, 255, 0.1);
+          background: #252526;
+          border-color: #333333;
           color: #f0f6fc;
         }
         .ai-modal-header {
@@ -193,8 +193,8 @@ export const AiDebugModal = ({
           background: #f8fafc;
         }
         .ai-modal-overlay.dark .ai-modal-header {
-          background: #090d16;
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-bottom-color: #2b2b2b;
         }
         .ai-header-left {
           display: flex;
@@ -364,8 +364,8 @@ export const AiDebugModal = ({
           font-weight: 600;
         }
         .ai-modal-overlay.dark .diff-header-bar {
-          background: #090d16;
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-bottom-color: #2b2b2b;
           color: #94a3b8;
         }
         .diff-col-title {
@@ -394,8 +394,8 @@ export const AiDebugModal = ({
           background: #f8fafc;
         }
         .ai-modal-overlay.dark .ai-modal-footer {
-          background: #090d16;
-          border-top-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-top-color: #2b2b2b;
         }
         .btn-cancel {
           padding: 8px 16px;

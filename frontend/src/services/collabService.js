@@ -113,7 +113,7 @@ export const getRoomTicketAPI = async (roomId, idToken) => {
 };
 
 // Curated peer colors for collaborator cursors and badges
-const PEER_COLORS = ['#6366f1', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6'];
+const PEER_COLORS = ['#6366f1', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#0284c7'];
 
 export const getRandomColor = () => {
   return PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)];

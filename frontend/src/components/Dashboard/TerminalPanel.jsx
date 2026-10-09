@@ -256,8 +256,8 @@ export const TerminalPanel = ({
           z-index: 10;
         }
         .terminal-panel.dark {
-          background: #0a0c10;
-          border-top-color: rgba(255, 255, 255, 0.08);
+          background: #1e1e1e;
+          border-top-color: #2b2b2b;
         }
         .terminal-panel.minimized {
           height: 44px;
@@ -280,8 +280,8 @@ export const TerminalPanel = ({
           display: none;
         }
         .terminal-panel.dark .terminal-header {
-          background: #0d1017;
-          border-bottom-color: rgba(255, 255, 255, 0.08);
+          background: #181818;
+          border-bottom-color: #2b2b2b;
         }
         .header-left {
           display: flex;
@@ -355,8 +355,8 @@ export const TerminalPanel = ({
           font-weight: 600;
         }
         .terminal-panel.dark .meta-badge {
-          background: #11141d;
-          border-color: rgba(255, 255, 255, 0.08);
+          background: #252526;
+          border-color: #333333;
           color: #94a3b8;
         }
         .header-actions {
@@ -404,8 +404,8 @@ export const TerminalPanel = ({
           transition: all 0.15s ease;
         }
         .terminal-panel.dark .btn-terminal-icon {
-          background: #11141d;
-          border-color: rgba(255, 255, 255, 0.08);
+          background: #252526;
+          border-color: #333333;
           color: #94a3b8;
         }
         .btn-terminal-icon:hover:not(:disabled) {
@@ -414,7 +414,8 @@ export const TerminalPanel = ({
           border-color: #cbd5e1;
         }
         .terminal-panel.dark .btn-terminal-icon:hover:not(:disabled) {
-          background: #1e293b;
+          background: #2d2d2d;
+          border-color: #3e3e42;
           color: #ffffff;
         }
         .btn-terminal-icon:disabled {
@@ -432,8 +433,8 @@ export const TerminalPanel = ({
           transition: background-color 0.2s ease, color 0.2s ease;
         }
         .terminal-panel.dark .terminal-body {
-          background: #090d16;
-          color: #f8fafc;
+          background: #1e1e1e;
+          color: #cccccc;
         }
         .terminal-empty {
           color: #64748b;
@@ -441,7 +442,7 @@ export const TerminalPanel = ({
           padding: 12px 0;
         }
         .terminal-panel.dark .terminal-empty {
-          color: #94a3b8;
+          color: #858585;
         }
         .terminal-loading {
           display: flex;
@@ -466,9 +467,9 @@ export const TerminalPanel = ({
           font-weight: 600;
         }
         .terminal-panel.dark .kbd {
-          background: rgba(255, 255, 255, 0.1);
-          color: #38bdf8;
-          border-color: rgba(255, 255, 255, 0.15);
+          background: #252526;
+          color: #cccccc;
+          border-color: #333333;
         }
         .terminal-output-container {
           display: flex;
@@ -491,7 +492,7 @@ export const TerminalPanel = ({
           color: #475569;
         }
         .terminal-panel.dark .section-title {
-          color: #94a3b8;
+          color: #858585;
         }
         .compile-error-section .section-title {
           color: #dc2626;
@@ -517,9 +518,9 @@ export const TerminalPanel = ({
           color: #0f172a;
         }
         .terminal-panel.dark .output-pre {
-          background: rgba(17, 24, 39, 0.75);
-          border-color: rgba(255, 255, 255, 0.08);
-          color: #f8fafc;
+          background: #181818;
+          border-color: #2b2b2b;
+          color: #cccccc;
         }
         .stdout-section .output-pre {
           background: #f0fdf4;

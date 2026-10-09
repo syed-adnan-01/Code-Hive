@@ -642,8 +642,8 @@ export const CallPanel = ({
           flex-direction: column;
         }
         .codehive-call-container.dark {
-          background: #0f172a;
-          border-color: #1e293b;
+          background: #252526;
+          border-color: #333333;
           color: #f8fafc;
           box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
@@ -659,8 +659,8 @@ export const CallPanel = ({
           border-bottom: 1px solid #e2e8f0;
         }
         .dark .call-header {
-          background: #1e293b;
-          border-color: #334155;
+          background: #181818;
+          border-color: #2b2b2b;
         }
         .call-header-left {
           display: flex;
@@ -711,7 +711,7 @@ export const CallPanel = ({
           color: #0f172a;
         }
         .dark .btn-call-tool:hover {
-          background: #334155;
+          background: #2a2d2e;
           color: #ffffff;
         }
         .call-error-banner {
@@ -729,13 +729,13 @@ export const CallPanel = ({
           grid-template-columns: 1fr 1fr;
           gap: 10px;
           padding: 12px;
-          background: #090d16;
+          background: #1e1e1e;
           min-height: 220px;
         }
         .call-tile {
           position: relative;
-          background: #141b2d;
-          border: 1px solid #1e293b;
+          background: #252526;
+          border: 1px solid #333333;
           border-radius: 12px;
           overflow: hidden;
           height: 120px;
@@ -765,7 +765,7 @@ export const CallPanel = ({
           width: 48px;
           height: 48px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+          background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
           color: #ffffff;
           font-weight: 800;
           font-size: 1rem;

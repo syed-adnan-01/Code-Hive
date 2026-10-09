@@ -130,7 +130,7 @@ const AppContent = () => {
           <div className="auth-logo" onClick={() => setView('landing')} style={{ cursor: 'pointer' }}>
             <div className="auth-logo-hex">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#a855f7" strokeWidth="1.5" />
+                <polygon points="11,1 20,5.5 20,16.5 11,21 2,16.5 2,5.5" fill="#6366f1" stroke="#38bdf8" strokeWidth="1.5" />
                 <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="white" fillOpacity="0.25" />
               </svg>
             </div>
@@ -211,7 +211,7 @@ const AppContent = () => {
         .auth-logo-hex {
           width: 36px;
           height: 36px;
-          background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+          background: linear-gradient(135deg, #e0e7ff, #e0f2fe);
           border-radius: 10px;
           display: flex;
           align-items: center;
