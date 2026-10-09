@@ -62,18 +62,39 @@ export const getUserSubmissions = async (uid, limit = 20) => {
   if (isFirebaseAdminInitialized) {
     try {
       const db = admin.firestore();
-      const snapshot = await db
-        .collection('submissions')
-        .where('uid', '==', uid)
-        .orderBy('createdAt', 'desc')
-        .limit(limit)
-        .get();
+      let snapshot;
 
-      if (!snapshot.empty) {
-        return snapshot.docs.map((doc) => ({
+      try {
+        // Preferred: composite index (uid ASC, createdAt DESC)
+        snapshot = await db
+          .collection('submissions')
+          .where('uid', '==', uid)
+          .orderBy('createdAt', 'desc')
+          .limit(limit)
+          .get();
+      } catch (queryErr) {
+        // If composite index is pending or not yet created, fall back to querying by uid and sorting in-memory
+        if (queryErr.code === 9 || queryErr.message?.includes('requires an index') || queryErr.message?.includes('index')) {
+          console.warn(`ℹ️ Firestore composite index not ready for submissions (uid + createdAt). Using query fallback.`);
+          snapshot = await db
+            .collection('submissions')
+            .where('uid', '==', uid)
+            .limit(100)
+            .get();
+        } else {
+          throw queryErr;
+        }
+      }
+
+      if (snapshot && !snapshot.empty) {
+        const results = snapshot.docs.map((doc) => ({
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate().toISOString() : doc.data().createdAt,
         }));
+
+        return results
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .slice(0, limit);
       }
     } catch (err) {
       console.warn(`Querying Firestore submissions for ${uid} failed:`, err.message);

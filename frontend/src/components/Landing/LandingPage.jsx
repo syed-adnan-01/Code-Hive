@@ -129,6 +129,265 @@ const FEATURES = [
 ];
 
 /* ─────────────────────────────────────────────
+   FloatingShape — handles absolute positioning,
+   fly-in entry animation AND individual hover
+   lift/scale. Only the hovered shape reacts.
+───────────────────────────────────────────── */
+const FloatingShape = ({
+  children,
+  posStyle,                    // absolute positioning: {position:'absolute', top, left/right, ...}
+  delay = 0,                   // entry animation delay in ms
+  entryFrom = { x: 0, y: 80 },// off-screen origin vector
+  heroReady,                   // controls entry trigger
+  hoverScale = 1.18,           // scale on hover
+  hoverLift  = -10,            // px lift on hover
+}) => {
+  const [hovered, setHovered] = useState(false);
+  const tx = heroReady ? 0 : entryFrom.x;
+  const ty = heroReady ? 0 : entryFrom.y;
+  return (
+    <div
+      style={{
+        ...posStyle,
+        opacity:    heroReady ? 1 : 0,
+        transform:  `translate(${tx}px, ${ty}px)`,
+        transition: !heroReady
+          ? `opacity 0.6s ease ${delay}ms, transform 0.75s cubic-bezier(0.22,1,0.36,1) ${delay}ms`
+          : 'opacity 0.3s',
+        willChange: 'transform, opacity',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* inner div owns the hover transform — independent of parent */}
+      <div style={{
+        transform:  hovered ? `scale(${hoverScale}) translateY(${hoverLift}px)` : 'scale(1) translateY(0)',
+        filter:     hovered ? 'drop-shadow(0 16px 32px rgba(0,0,0,0.22))' : 'none',
+        transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s ease',
+        cursor:     'pointer',
+        willChange: 'transform',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   HeroSection — entry animations + per-shape hover
+───────────────────────────────────────────── */
+const HeroSection = ({ onGetStarted, onLogin }) => {
+  const [heroReady, setHeroReady] = useState(false);
+  // Individual hover states for the card, pill, and chip
+  const [cardHovered, setCardHovered] = useState(false);
+  const [pillHovered, setPillHovered] = useState(false);
+  const [chipHovered, setChipHovered] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHeroReady(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  const fi = (delay) => ({
+    opacity:    heroReady ? 1 : 0,
+    transform:  heroReady ? 'translateY(0)' : 'translateY(24px)',
+    transition: `opacity 0.7s ease ${delay}ms, transform 0.7s cubic-bezier(0.22,1,0.36,1) ${delay}ms`,
+  });
+
+  // Shorthand props forwarded to every FloatingShape
+  const fs = (posStyle, delay, entryFrom, opts = {}) =>
+    ({ posStyle, delay, entryFrom, heroReady, ...opts });
+
+  return (
+    <section className="lp-hero">
+      {/* Left column: copy */}
+      <div className="lp-hero-copy">
+        <div className="lp-eyebrow" style={fi(0)}>
+          <span className="lp-eyebrow-dot" />
+          REAL-TIME COLLABORATIVE IDE
+        </div>
+
+        <h1 className="lp-hero-h1" style={fi(100)}>
+          Code together,
+          <br />
+          <span className="lp-h1-accent">ship faster.</span>
+        </h1>
+
+        <p className="lp-hero-sub" style={fi(220)}>
+          CodeHive connects developer teams with ultra-low latency pair-programming,
+          live CRDT state sync, sandboxed multi-language execution, and enterprise-grade
+          security — all in one hive.
+        </p>
+
+        <div className="lp-hero-ctas" style={fi(340)}>
+          <button className="lp-btn-primary lp-btn-lg" onClick={onGetStarted}>
+            Start Coding Free
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button className="lp-btn-outline" onClick={onLogin}>See how it works</button>
+        </div>
+
+        <div className="lp-trust" style={fi(460)}>
+          <span className="lp-trust-label">Supports</span>
+          {LANGS.map(l => (
+            <span key={l.name} className="lp-lang-badge" style={{ background: l.bg, color: l.color }}>
+              {l.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Right column: geometric illustration */}
+      <div className="lp-hero-visual" aria-hidden="true">
+
+        {/* Blob — scales up from centre, no hover */}
+        <div className="lp-hero-blob" style={{
+          position: 'absolute', top: '50%', left: '50%',
+          opacity:    heroReady ? 1 : 0,
+          transform:  heroReady ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.6)',
+          transition: 'opacity 0.9s ease 100ms, transform 0.9s cubic-bezier(0.22,1,0.36,1) 100ms',
+        }} />
+
+        {/* ── Geometric shapes — each FloatingShape is self-contained ── */}
+
+        {/* Orange circle — top-left */}
+        <FloatingShape {...fs({ position:'absolute', top:'8%',    left:'12%'  }, 180, { x:-180, y:-180 })}>
+          <ShapeCircle color="#f97316" size={90} />
+        </FloatingShape>
+
+        {/* Indigo outline circle — top-right */}
+        <FloatingShape {...fs({ position:'absolute', top:'5%',    right:'20%' }, 260, { x: 160, y:-160 })}>
+          <ShapeCircleOutline color="#6366f1" size={70} />
+        </FloatingShape>
+
+        {/* Green circle — right */}
+        <FloatingShape {...fs({ position:'absolute', top:'20%',   right:'8%'  }, 140, { x: 220, y: -60 })}>
+          <ShapeCircle color="#10b981" size={55} />
+        </FloatingShape>
+
+        {/* Yellow triangle — left */}
+        <FloatingShape {...fs({ position:'absolute', top:'45%',   left:'5%'   }, 320, { x:-220, y:  40 })}>
+          <ShapeTriangle color="#f59e0b" size={64} />
+        </FloatingShape>
+
+        {/* Indigo inverted triangle — bottom-right */}
+        <FloatingShape {...fs({ position:'absolute', bottom:'25%', right:'12%' }, 380, { x: 180, y: 180 })}>
+          <ShapeTriangle color="#6366f1" size={48} style={{ transform: 'rotate(180deg)' }} />
+        </FloatingShape>
+
+        {/* Purple pill — bottom-left */}
+        <FloatingShape {...fs({ position:'absolute', bottom:'35%', left:'18%'  }, 420, { x:-200, y: 120 })}>
+          <ShapeRect color="#a855f7" w={110} h={52} radius={26} />
+        </FloatingShape>
+
+        {/* Cyan half-circle — bottom */}
+        <FloatingShape {...fs({ position:'absolute', bottom:'15%', left:'38%'  }, 300, { x:  20, y: 240 })}>
+          <ShapeHalf color="#06b6d4" size={80} />
+        </FloatingShape>
+
+        {/* Red square — right */}
+        <FloatingShape {...fs({ position:'absolute', top:'38%',   right:'26%' }, 200, { x: 240, y:  20 })}>
+          <ShapeRect color="#ef4444" w={52} h={52} radius={8} />
+        </FloatingShape>
+
+        {/* Amber circle — bottom-right */}
+        <FloatingShape {...fs({ position:'absolute', bottom:'30%', right:'30%' }, 340, { x: 160, y: 160 })}>
+          <ShapeCircle color="#fbbf24" size={40} />
+        </FloatingShape>
+
+        {/* Code editor card — scales up from centre, hover: slight lift */}
+        <div
+          className="lp-code-card lp-card-float"
+          style={{
+            opacity:    heroReady ? 1 : 0,
+            transform:  heroReady
+              ? `translate(-50%, -50%) scale(1) ${cardHovered ? 'translateY(-8px)' : ''}`
+              : 'translate(-50%, calc(-50% + 60px)) scale(0.88)',
+            filter:     cardHovered && heroReady ? 'drop-shadow(0 20px 40px rgba(0,0,0,0.35))' : undefined,
+            transition: heroReady
+              ? 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s ease'
+              : 'opacity 0.8s ease 460ms, transform 0.85s cubic-bezier(0.22,1,0.36,1) 460ms',
+            cursor: 'pointer',
+            willChange: 'transform, opacity',
+          }}
+          onMouseEnter={() => setCardHovered(true)}
+          onMouseLeave={() => setCardHovered(false)}
+        >
+          <div className="lp-code-card-dots">
+            <span style={{background:'#ef4444'}} />
+            <span style={{background:'#f59e0b'}} />
+            <span style={{background:'#10b981'}} />
+          </div>
+          <pre className="lp-code-snippet">{`// CodeHive — Live Session
+const room = await hive.joinRoom({
+  id: "team-sprint-42",
+  role: "editor"
+});
+
+room.onCollaborator((user) => {
+  console.log(\`\${user.name} joined!\`);
+});`}<span className="lp-cursor" /></pre>
+        </div>
+
+        {/* Live users pill — flies in from right, hover: lift */}
+        <div
+          className="lp-live-pill"
+          style={{
+            position: 'absolute', top: '12%', right: '-12px',
+            opacity:    heroReady ? 1 : 0,
+            transform:  heroReady
+              ? `translateY(${pillHovered ? -8 : 0}px) scale(${pillHovered ? 1.06 : 1})`
+              : 'translate(200px, -60px)',
+            filter:     pillHovered && heroReady ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.18))' : undefined,
+            transition: heroReady
+              ? 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s ease'
+              : 'opacity 0.7s ease 560ms, transform 0.8s cubic-bezier(0.22,1,0.36,1) 560ms',
+            cursor: 'pointer',
+            willChange: 'transform, opacity',
+            animation:  heroReady && !pillHovered ? 'lp-pill-bob 4s ease-in-out 1.3s infinite' : 'none',
+          }}
+          onMouseEnter={() => setPillHovered(true)}
+          onMouseLeave={() => setPillHovered(false)}
+        >
+          <span className="lp-live-dot" />
+          <span className="lp-live-avatars">
+            {['#6366f1','#f97316','#10b981'].map((c, i) => (
+              <span key={i} className="lp-avatar" style={{ background: c, marginLeft: i ? -8 : 0 }} />
+            ))}
+          </span>
+          <span>3 devs coding now</span>
+        </div>
+
+        {/* Run chip — flies in from left, hover: lift */}
+        <div
+          className="lp-run-chip"
+          style={{
+            position: 'absolute', bottom: '20%', left: '-12px',
+            opacity:    heroReady ? 1 : 0,
+            transform:  heroReady
+              ? `translateY(${chipHovered ? -8 : 0}px) scale(${chipHovered ? 1.06 : 1})`
+              : 'translate(-220px, 80px)',
+            filter:     chipHovered && heroReady ? 'drop-shadow(0 10px 20px rgba(16,185,129,0.3))' : undefined,
+            transition: heroReady
+              ? 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1), filter 0.3s ease'
+              : 'opacity 0.7s ease 640ms, transform 0.8s cubic-bezier(0.22,1,0.36,1) 640ms',
+            cursor: 'pointer',
+            willChange: 'transform, opacity',
+            animation:  heroReady && !chipHovered ? 'lp-chip-bob 4.5s ease-in-out 1.4s infinite' : 'none',
+          }}
+          onMouseEnter={() => setChipHovered(true)}
+          onMouseLeave={() => setChipHovered(false)}
+        >
+          <span className="lp-run-icon lp-run-blink">▶</span>
+          <span>Executed in 142ms · Judge0</span>
+        </div>
+
+      </div>
+    </section>
+  );
+};
+
+/* ─────────────────────────────────────────────
    Main LandingPage Component
 ───────────────────────────────────────────── */
 export const LandingPage = ({ onGetStarted, onLogin }) => {
@@ -202,136 +461,7 @@ export const LandingPage = ({ onGetStarted, onLogin }) => {
       </header>
 
       {/* ── HERO SECTION ── */}
-      <section className="lp-hero">
-        {/* Left column: copy */}
-        <div className="lp-hero-copy">
-          <div className="lp-eyebrow">
-            <span className="lp-eyebrow-dot" />
-            REAL-TIME COLLABORATIVE IDE
-          </div>
-
-          <h1 className="lp-hero-h1">
-            Code together,
-            <br />
-            <span className="lp-h1-accent">ship faster.</span>
-          </h1>
-
-          <p className="lp-hero-sub">
-            CodeHive connects developer teams with ultra-low latency pair-programming,
-            live CRDT state sync, sandboxed multi-language execution, and enterprise-grade
-            security — all in one hive.
-          </p>
-
-          <div className="lp-hero-ctas">
-            <button className="lp-btn-primary lp-btn-lg" onClick={onGetStarted}>
-              Start Coding Free
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-            <button className="lp-btn-outline" onClick={onLogin}>
-              See how it works
-            </button>
-          </div>
-
-          {/* Trust logos */}
-          <div className="lp-trust">
-            <span className="lp-trust-label">Supports</span>
-            {LANGS.map(l => (
-              <span key={l.name} className="lp-lang-badge"
-                style={{ background: l.bg, color: l.color }}>
-                {l.name}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Right column: geometric illustration */}
-        <div className="lp-hero-visual" aria-hidden="true">
-          {/* Big background blob — pulses softly */}
-          <div className="lp-hero-blob" />
-
-          {/* ── Animated shapes ── each has a unique float/spin class */}
-          {/* Orange circle — slow bob */}
-          <ShapeCircle color="#f97316" size={90}
-            style={{ position: 'absolute', top: '8%', left: '12%', opacity: 0.9,
-              animation: 'lp-float-a 6s ease-in-out infinite' }} />
-
-          {/* Indigo outline circle — counter-spin */}
-          <ShapeCircleOutline color="#6366f1" size={70}
-            style={{ position: 'absolute', top: '5%', right: '20%',
-              animation: 'lp-spin-slow 12s linear infinite' }} />
-
-          {/* Green filled circle — bob up faster */}
-          <ShapeCircle color="#10b981" size={55}
-            style={{ position: 'absolute', top: '20%', right: '8%',
-              animation: 'lp-float-b 4.5s ease-in-out infinite' }} />
-
-          {/* Yellow triangle — gentle rock */}
-          <ShapeTriangle color="#f59e0b" size={64}
-            style={{ position: 'absolute', top: '45%', left: '5%',
-              animation: 'lp-rock 5s ease-in-out infinite' }} />
-
-          {/* Indigo inverted triangle — drift down-right */}
-          <ShapeTriangle color="#6366f1" size={48}
-            style={{ position: 'absolute', bottom: '25%', right: '12%',
-              transform: 'rotate(180deg)',
-              animation: 'lp-float-c 7s ease-in-out infinite' }} />
-
-          {/* Purple pill — slide float */}
-          <ShapeRect color="#a855f7" w={110} h={52} radius={26}
-            style={{ position: 'absolute', bottom: '35%', left: '18%',
-              animation: 'lp-float-a 5.5s ease-in-out infinite 0.8s' }} />
-
-          {/* Cyan half-circle — sway */}
-          <ShapeHalf color="#06b6d4" size={80}
-            style={{ position: 'absolute', bottom: '15%', left: '38%',
-              animation: 'lp-sway 6.5s ease-in-out infinite' }} />
-
-          {/* Red square — slow spin */}
-          <ShapeRect color="#ef4444" w={52} h={52} radius={8}
-            style={{ position: 'absolute', top: '38%', right: '26%',
-              animation: 'lp-spin-slow 9s linear infinite reverse' }} />
-
-          {/* Amber small circle — fast bob */}
-          <ShapeCircle color="#fbbf24" size={40}
-            style={{ position: 'absolute', bottom: '30%', right: '30%', opacity: 0.8,
-              animation: 'lp-float-b 3.8s ease-in-out infinite 1.2s' }} />
-
-          {/* Floating code editor card — gentle levitate */}
-          <div className="lp-code-card lp-card-float">
-            <div className="lp-code-card-dots">
-              <span style={{background:'#ef4444'}} />
-              <span style={{background:'#f59e0b'}} />
-              <span style={{background:'#10b981'}} />
-            </div>
-            <pre className="lp-code-snippet">{`// CodeHive — Live Session
-const room = await hive.joinRoom({
-  id: "team-sprint-42",
-  role: "editor"
-});
-
-room.onCollaborator((user) => {
-  console.log(\`\${user.name} joined!\`);
-});`}<span className="lp-cursor" /></pre>
-          </div>
-
-          {/* Live users pill — slides in from right */}
-          <div className="lp-live-pill lp-slide-in-right">
-            <span className="lp-live-dot" />
-            <span className="lp-live-avatars">
-              {['#6366f1','#f97316','#10b981'].map((c, i) => (
-                <span key={i} className="lp-avatar" style={{ background: c, marginLeft: i ? -8 : 0 }} />
-              ))}
-            </span>
-            <span>3 devs coding now</span>
-          </div>
-
-          {/* Run result chip — slides in from left */}
-          <div className="lp-run-chip lp-slide-in-left">
-            <span className="lp-run-icon lp-run-blink">▶</span>
-            <span>Executed in 142ms · Judge0</span>
-          </div>
-        </div>
-      </section>
+      <HeroSection onGetStarted={onGetStarted} onLogin={onLogin} />
 
       {/* ── STATS BAR ── */}
       <div className="lp-stats-bar">
@@ -962,10 +1092,8 @@ room.onCollaborator((user) => {
           50%      { opacity: 0; }
         }
 
-        /* ── Live pill — slide in from right, then gentle bob ── */
+        /* ── Live pill ── */
         .lp-live-pill {
-          position: absolute;
-          top: 12%; right: -12px;
           background: white;
           border-radius: 50px;
           padding: 8px 14px;
@@ -978,15 +1106,7 @@ room.onCollaborator((user) => {
           box-shadow: 0 4px 20px rgba(0,0,0,0.12);
           z-index: 20;
         }
-        .lp-slide-in-right {
-          animation:
-            lp-enter-right 0.7s cubic-bezier(0.22,1,0.36,1) both,
-            lp-pill-bob 4s ease-in-out 0.7s infinite;
-        }
-        @keyframes lp-enter-right {
-          from { opacity: 0; transform: translateX(40px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
+        /* pill-bob used in inline style animation after fade-in */
         @keyframes lp-pill-bob {
           0%,100% { transform: translateY(0); }
           50%      { transform: translateY(-6px); }
@@ -1028,15 +1148,7 @@ room.onCollaborator((user) => {
           z-index: 20;
           overflow: hidden;
         }
-        .lp-slide-in-left {
-          animation:
-            lp-enter-left 0.7s cubic-bezier(0.22,1,0.36,1) 0.3s both,
-            lp-chip-bob 4.5s ease-in-out 1s infinite;
-        }
-        @keyframes lp-enter-left {
-          from { opacity: 0; transform: translateX(-40px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
+        /* chip-bob used in inline style animation after fade-in */
         @keyframes lp-chip-bob {
           0%,100% { transform: translateY(0); }
           50%      { transform: translateY(-5px); }
