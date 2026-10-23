@@ -21,30 +21,22 @@ import {
   setupHocuspocusCollab,
   getAuthTokenForRoom,
   markTabRoomAsCreated,
-  isTabRoomCreator,
 } from '../../services/collabService';
 import {
-  Code,
   Play,
   Share2,
-  Zap,
-  Server,
   Sparkles,
   ChevronDown,
   Terminal,
   FileCode,
   ShieldCheck,
-  CheckCircle2,
   Users2,
-  RotateCcw,
   Check,
-  Copy,
   LogOut,
   Radio,
   Lock,
   Globe,
   History,
-  Clock,
   Folder,
   FolderOpen,
   Plus,
@@ -54,12 +46,11 @@ import {
   FileJson,
   MessageSquare,
   Video,
-  PhoneCall,
   Mail,
 } from 'lucide-react';
 
 export const WorkspacePreview = () => {
-  const { currentUser, isDemoMode } = useAuth();
+  const { currentUser } = useAuth();
   const { isDark } = useTheme();
 
   // Multi-file Workspace state (IDE Extension Plan Section 3)
@@ -82,6 +73,8 @@ export const WorkspacePreview = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [executionResult, setExecutionResult] = useState(null);
   const [cursorStats, setCursorStats] = useState({ line: 1, col: 1 });
+  const [executionMode, setExecutionMode] = useState('terminal'); // 'terminal' | 'batch'
+  const interactiveTermRef = useRef(null);
 
   // Collaboration Room states
   const [currentRoom, setCurrentRoom] = useState(null);
@@ -126,8 +119,6 @@ export const WorkspacePreview = () => {
 
   // Sidebar / Drawer states (Defaults to 'files' for instant explorer access)
   const [activeSidebarTab, setActiveSidebarTab] = useState('files');
-  const [apiResponse, setApiResponse] = useState(null);
-  const [loadingApi, setLoadingApi] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
   // Load user execution history from backend GET /api/run/history
@@ -566,25 +557,7 @@ export const WorkspacePreview = () => {
     }
   };
 
-  // Load Stdin template for the current language
-  const handleLoadStdinTemplate = () => {
-    if (selectedLanguage.stdinTemplate) {
-      if (!collabYText) {
-        setCode(selectedLanguage.stdinTemplate);
-      }
-      handleStdinChange('5\n10 20 30 40 50');
-      setIsStdinOpen(true);
-      setExecutionResult(null);
-    }
-  };
 
-  // Reset to default Hello World template
-  const handleResetTemplate = () => {
-    if (!collabYText) {
-      setCode(selectedLanguage.defaultCode);
-    }
-    setExecutionResult(null);
-  };
 
   // Execute Code via Judge0 backend API (supporting live room doc per Architecture Section 6.2 & Extension Plan Section 3)
   const handleRunCode = useCallback(async () => {
@@ -629,6 +602,28 @@ export const WorkspacePreview = () => {
       setIsRunning(false);
     }
   }, [activeFileId, code, collabYText, currentRoom, currentUser, files, isRunning, selectedLanguage, stdin]);
+
+  // Execute Code via Interactive PTY Terminal (addressing batch execution limitation)
+  const handleRunInteractive = useCallback(() => {
+    if (isReadOnly) return;
+    const activeFile = files[activeFileId] || Object.values(files)[0];
+    const activeCode = collabYText ? collabYText.toString() : (activeFile?.text || code);
+    if (interactiveTermRef.current) {
+      interactiveTermRef.current.runInteractiveCode({
+        sourceCode: activeCode,
+        languageId: selectedLanguage.id,
+      });
+    }
+  }, [activeFileId, code, collabYText, files, isReadOnly, selectedLanguage]);
+
+  // Unified Run Dispatcher (supporting Ctrl+Enter shortcuts)
+  const handleExecute = useCallback(() => {
+    if (executionMode === 'terminal') {
+      handleRunInteractive();
+    } else {
+      handleRunCode();
+    }
+  }, [executionMode, handleRunInteractive, handleRunCode]);
 
   // AI Error Diagnosis & Diff Fix generation (Week C - Section 6.2)
   const handleExplainError = useCallback(async () => {
@@ -679,30 +674,7 @@ export const WorkspacePreview = () => {
     setIsAiDebugModalOpen(false);
   }, [activeFileId, collabYText, isReadOnly]);
 
-  // Test Firebase ID token verification against Express API
-  const handleTestBackendAPI = async () => {
-    setLoadingApi(true);
-    setApiResponse(null);
-    try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-      const token = await getAuthTokenForRoom(currentRoom?.id, currentUser);
 
-      const res = await fetch(`${backendUrl}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      setApiResponse(data);
-    } catch (err) {
-      setApiResponse({
-        error: 'Backend API connection offline or not running yet',
-        details: err.message,
-      });
-    } finally {
-      setLoadingApi(false);
-    }
-  };
 
   return (
     <div className={`workspace-container ${isDark ? 'dark' : 'light'}`}>
@@ -809,30 +781,7 @@ export const WorkspacePreview = () => {
             </button>
           )}
 
-          {/* Quick Template Switchers (Solo mode or editable) */}
-          {!isReadOnly && !currentRoom && (
-            <>
-              <button
-                type="button"
-                className="btn-template-switch"
-                onClick={handleResetTemplate}
-                title="Reset to Hello World template"
-              >
-                <RotateCcw size={13} />
-                <span>Hello World</span>
-              </button>
 
-              <button
-                type="button"
-                className="btn-template-switch"
-                onClick={handleLoadStdinTemplate}
-                title="Load Stdin example program"
-              >
-                <Sparkles size={13} className="text-amber" />
-                <span>Stdin Example</span>
-              </button>
-            </>
-          )}
 
           {/* Stdin Drawer Toggle */}
           <button
@@ -871,57 +820,99 @@ export const WorkspacePreview = () => {
             </button>
           )}
 
-          {/* Primary Run Code Button */}
-          <button
-            className="btn-run-main"
-            onClick={handleRunCode}
-            disabled={isRunning || isReadOnly}
-            title={isReadOnly ? 'Viewers cannot execute code' : 'Run Code via Judge0 API (Ctrl + Enter)'}
-          >
-            <Play size={14} className="fill-current" />
-            <span className="btn-label-desktop">{isRunning ? 'Running...' : isReadOnly ? 'View Only' : 'Run Code'}</span>
-            <span className="btn-label-compact">{isRunning ? 'Running...' : isReadOnly ? 'View' : 'Run'}</span>
-          </button>
+          {/* Primary Run Code Button with Runner Selection */}
+          <div className="run-button-group">
+            <button
+              className="btn-run-main"
+              onClick={handleExecute}
+              disabled={isReadOnly || (executionMode === 'batch' ? isRunning : false)}
+              title={
+                isReadOnly
+                  ? 'Viewers cannot execute code'
+                  : executionMode === 'terminal'
+                  ? 'Run in Interactive Terminal (Ctrl + Enter)'
+                  : 'Run via Judge0 API (Ctrl + Enter)'
+              }
+            >
+              <Play size={14} className="fill-current" />
+              <span className="btn-label-desktop">
+                {isReadOnly
+                  ? 'View Only'
+                  : executionMode === 'terminal'
+                  ? 'Run in Terminal'
+                  : isRunning
+                  ? 'Running...'
+                  : 'Run Code'}
+              </span>
+              <span className="btn-label-compact">Run</span>
+            </button>
+            {!isReadOnly && (
+              <select
+                className="select-run-mode font-brand"
+                value={executionMode}
+                onChange={(e) => setExecutionMode(e.target.value)}
+                title="Select Code Execution Engine"
+              >
+                <option value="terminal">PTY Shell</option>
+                <option value="batch">Judge0 Batch</option>
+              </select>
+            )}
+          </div>
 
           {/* Collaborator Avatars */}
           <div className="collaborator-avatars" title="Connected Collaborators (Click to view profile)">
             {activePeers.length > 0 ? (
-              activePeers.map((peer, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`avatar-pill ${selectedPeer?.email === peer.email || (selectedPeer?.name === peer.name && selectedPeer?.color === peer.color) ? 'avatar-active' : ''}`}
-                  style={{ borderColor: peer.color || '#6366f1' }}
-                  onClick={() => setSelectedPeer(selectedPeer?.email === peer.email ? null : peer)}
-                  title={`Click to view details for ${peer.name} (${peer.role || 'editor'})`}
-                  aria-label={`Collaborator ${peer.name}`}
-                >
-                  {peer.photoURL ? (
-                    <img
-                      src={peer.photoURL}
-                      alt={peer.name}
-                      className="avatar-peer-photo"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        if (e.currentTarget.nextSibling) {
-                          e.currentTarget.nextSibling.style.display = 'flex';
-                        }
-                      }}
-                    />
-                  ) : null}
-                  <span
-                    className="avatar-peer-fallback font-code"
-                    style={{
-                      backgroundColor: peer.color || '#6366f1',
-                      display: peer.photoURL ? 'none' : 'flex',
-                    }}
-                  >
-                    {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
-                  </span>
-                  <span className={`peer-badge-dot role-dot-${peer.role || 'editor'}`} />
-                </button>
-              ))
+              activePeers
+                .filter((p, i, arr) => i === arr.findIndex((x) => 
+                  (x.uid && x.uid === p.uid) || 
+                  (x.email && x.email === p.email) || 
+                  (x.photoURL && x.photoURL === p.photoURL) || 
+                  (x.name && x.name === p.name) ||
+                  x.id === p.id
+                ))
+                .map((peer, idx) => {
+                  const isSelected = selectedPeer?.id === peer.id ||
+                    (peer.uid && selectedPeer?.uid === peer.uid) ||
+                    (peer.email && selectedPeer?.email === peer.email) ||
+                    (selectedPeer?.name === peer.name && selectedPeer?.color === peer.color);
+                  const uniqueKey = peer.uid || peer.email || peer.photoURL || peer.id || `peer-${idx}`;
+                  return (
+                    <button
+                      key={uniqueKey}
+                      type="button"
+                      className={`avatar-pill ${isSelected ? 'avatar-active' : ''}`}
+                      style={{ borderColor: peer.color || '#6366f1' }}
+                      onClick={() => setSelectedPeer(isSelected ? null : peer)}
+                      title={`Click to view details for ${peer.name} (${peer.role || 'editor'})${peer.isSelf ? ' - You' : ''}`}
+                      aria-label={`Collaborator ${peer.name}`}
+                    >
+                      {peer.photoURL ? (
+                        <img
+                          src={peer.photoURL}
+                          alt={peer.name}
+                          className="avatar-peer-photo"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextSibling) {
+                              e.currentTarget.nextSibling.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className="avatar-peer-fallback font-code"
+                        style={{
+                          backgroundColor: peer.color || '#6366f1',
+                          display: peer.photoURL ? 'none' : 'flex',
+                        }}
+                      >
+                        {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
+                      </span>
+                      <span className={`peer-badge-dot role-dot-${peer.role || 'editor'}`} />
+                    </button>
+                  );
+                })
             ) : (
               <button
                 type="button"
@@ -1099,13 +1090,6 @@ export const WorkspacePreview = () => {
               {activeSidebarTab === 'files' ? <FolderOpen size={18} /> : <Folder size={18} />}
             </button>
             <button
-              className={`sidebar-tab-btn ${activeSidebarTab === 'templates' ? 'active' : ''}`}
-              onClick={() => setActiveSidebarTab(activeSidebarTab === 'templates' ? '' : 'templates')}
-              title="Language Templates & Snippets"
-            >
-              <FileCode size={18} />
-            </button>
-            <button
               className={`sidebar-tab-btn ${activeSidebarTab === 'history' ? 'active' : ''}`}
               onClick={() => (activeSidebarTab === 'history' ? setActiveSidebarTab('') : loadHistory())}
               title="Execution History"
@@ -1142,13 +1126,6 @@ export const WorkspacePreview = () => {
             >
               <ShieldCheck size={18} className="text-indigo" />
             </button>
-            <button
-              className={`sidebar-tab-btn ${activeSidebarTab === 'api' ? 'active' : ''}`}
-              onClick={() => setActiveSidebarTab(activeSidebarTab === 'api' ? '' : 'api')}
-              title="Test Backend Auth Token Verification"
-            >
-              <Server size={18} />
-            </button>
           </div>
 
           {/* Collapsible Sidebar Drawer */}
@@ -1175,57 +1152,7 @@ export const WorkspacePreview = () => {
                 />
               )}
 
-              {activeSidebarTab === 'templates' && (
-                <div className="drawer-content">
-                  <div className="drawer-header">
-                    <span className="font-brand drawer-title">PROGRAM TEMPLATES</span>
-                  </div>
-                  <p className="drawer-desc">
-                    Switch language or load starter snippets for testing multi-language execution and stdin:
-                  </p>
-                  <div className="template-cards-list">
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <div
-                        key={lang.id}
-                        className={`template-card ${selectedLanguage.id === lang.id ? 'active' : ''}`}
-                        onClick={() => handleLanguageChange(lang)}
-                      >
-                        <div className="template-card-header">
-                          <span className="lang-color-dot" style={{ backgroundColor: lang.badgeColor }}></span>
-                          <span className="template-card-name font-code">{lang.name}</span>
-                        </div>
-                        <div className="template-card-actions">
-                          <button
-                            type="button"
-                            className="btn-mini"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleLanguageChange(lang);
-                            }}
-                          >
-                            Hello World
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-mini"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLanguage(lang);
-                              if (lang.stdinTemplate) {
-                                if (!collabYText) setCode(lang.stdinTemplate);
-                                handleStdinChange('5\n10 20 30 40 50');
-                                setIsStdinOpen(true);
-                              }
-                            }}
-                          >
-                            Stdin
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               {activeSidebarTab === 'history' && (
                 <div className="drawer-content">
@@ -1297,29 +1224,7 @@ export const WorkspacePreview = () => {
                 </div>
               )}
 
-              {activeSidebarTab === 'api' && (
-                <div className="drawer-content">
-                  <div className="drawer-header">
-                    <span className="font-brand drawer-title">BACKEND API TEST</span>
-                  </div>
-                  <p className="drawer-desc">
-                    Test Firebase ID token verification against Express API endpoint (<code className="code-tag">/api/auth/me</code>).
-                  </p>
-                  <button
-                    className="btn-secondary test-api-btn"
-                    onClick={handleTestBackendAPI}
-                    disabled={loadingApi}
-                  >
-                    {loadingApi ? 'Calling API...' : 'Test Backend Auth Endpoint'}
-                  </button>
 
-                  {apiResponse && (
-                    <div className="api-response-box font-code">
-                      <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </aside>
@@ -1404,7 +1309,7 @@ export const WorkspacePreview = () => {
               language={selectedLanguage.monaco}
               onChange={handleCodeChange}
               onCursorChange={setCursorStats}
-              onRunCode={handleRunCode}
+              onRunCode={handleExecute}
               isReadOnly={isReadOnly}
               ytext={collabYText}
               provider={collabProvider}
@@ -1431,6 +1336,11 @@ export const WorkspacePreview = () => {
             onClearOutput={() => setExecutionResult(null)}
             onExplainError={handleExplainError}
             isAiAnalyzing={isAiAnalyzing}
+            roomId={currentRoom ? currentRoom.id : 'solo'}
+            userRole={userRole}
+            selectedLanguage={selectedLanguage}
+            activeCode={collabYText ? collabYText.toString() : (files[activeFileId]?.text || code)}
+            interactiveTermRef={interactiveTermRef}
           />
 
           {/* Bottom Editor Status Bar */}
@@ -1886,6 +1796,46 @@ export const WorkspacePreview = () => {
           border-color: #a7f3d0;
           color: #059669;
           box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15);
+        }
+        .run-button-group {
+          display: flex;
+          align-items: center;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          border-radius: 50px;
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+          overflow: hidden;
+          transition: all 0.2s ease;
+        }
+        .run-button-group:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+        }
+        .run-button-group .btn-run-main {
+          background: transparent;
+          box-shadow: none;
+          padding: 6px 14px 6px 18px;
+        }
+        .run-button-group .btn-run-main:hover:not(:disabled) {
+          transform: none;
+          box-shadow: none;
+        }
+        .select-run-mode {
+          background: rgba(0, 0, 0, 0.2);
+          border: none;
+          border-left: 1px solid rgba(255, 255, 255, 0.3);
+          color: #ffffff;
+          padding: 6px 10px 6px 6px;
+          font-size: 0.74rem;
+          font-weight: 700;
+          cursor: pointer;
+          outline: none;
+          height: 100%;
+          border-top-right-radius: 50px;
+          border-bottom-right-radius: 50px;
+        }
+        .select-run-mode option {
+          background: #1e293b;
+          color: #f8fafc;
         }
         .btn-run-main {
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);

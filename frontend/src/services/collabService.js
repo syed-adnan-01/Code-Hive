@@ -115,6 +115,16 @@ export const getRoomTicketAPI = async (roomId, idToken) => {
 // Curated peer colors for collaborator cursors and badges
 const PEER_COLORS = ['#6366f1', '#06b6d4', '#ec4899', '#10b981', '#f59e0b', '#0284c7'];
 
+export const getUserColor = (identifier) => {
+  if (!identifier) return PEER_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < identifier.length; i++) {
+    hash = (hash << 5) - hash + identifier.charCodeAt(i);
+    hash |= 0;
+  }
+  return PEER_COLORS[Math.abs(hash) % PEER_COLORS.length];
+};
+
 export const getRandomColor = () => {
   return PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)];
 };
@@ -152,27 +162,60 @@ export const setupHocuspocusCollab = ({
 
     onAwarenessUpdate: () => {
       if (onPeersChange) {
+        const localClientId = provider.awareness.clientID;
         const states = Array.from(provider.awareness.getStates().entries());
-        const peers = states
+
+        const rawPeers = states
           .map(([clientId, state]) => {
-            if (!state.user) return null;
+            if (!state || !state.user) return null;
             return {
               id: clientId,
+              isSelf: clientId === localClientId,
               ...state.user,
               photoURL: state.user.photoURL || null,
               uid: state.user.uid || null,
               activeFile: state.activeFile || state.user.activeFile || 'main',
+              connectedAt: state.user.connectedAt || 0,
             };
           })
           .filter(Boolean);
+
+        // Deduplicate peers by unique user identity (uid, email, photoURL, or base name)
+        // This prevents duplicate icons when a user reconnects, refreshes, or has multiple tabs
+        const userMap = new Map();
+        for (const peer of rawPeers) {
+          const userKey =
+            peer.uid ||
+            peer.email ||
+            peer.photoURL ||
+            (peer.name ? peer.name.replace(/\s*\([^)]*\)$/, '').trim() : String(peer.id));
+
+          if (!userMap.has(userKey)) {
+            userMap.set(userKey, peer);
+          } else {
+            const existing = userMap.get(userKey);
+            // Always prefer the active local tab if it represents the current user
+            if (peer.isSelf) {
+              userMap.set(userKey, peer);
+            } else if (
+              !existing.isSelf &&
+              ((peer.connectedAt || 0) >= (existing.connectedAt || 0) || peer.id > existing.id)
+            ) {
+              userMap.set(userKey, peer);
+            }
+          }
+        }
+
+        const peers = Array.from(userMap.values());
         onPeersChange(peers);
       }
     },
   });
 
   // Set user awareness presence (name, color, role)
-  const peerColor = getRandomColor();
   const tabId = getTabSessionId();
+  const userIdentifier = user?.uid || user?.email || user?.displayName || user?.photoURL || tabId;
+  const peerColor = getUserColor(userIdentifier);
   const isOwner = role === 'owner';
   const roleLabel = isOwner ? 'Owner' : (role === 'viewer' ? 'Viewer' : 'Collaborator');
   const baseName = user?.displayName || user?.name || (user?.email ? user.email.split('@')[0] : null);
@@ -180,6 +223,7 @@ export const setupHocuspocusCollab = ({
     ? `${baseName} (${roleLabel})`
     : (isOwner ? 'Room Owner' : `Collaborator ${tabId.slice(0, 4).toUpperCase()}`);
 
+  const now = Date.now();
   provider.setAwarenessField('user', {
     name: defaultDisplayName,
     email: user?.email || '',
@@ -187,7 +231,19 @@ export const setupHocuspocusCollab = ({
     uid: user?.uid || null,
     color: peerColor,
     role: role || 'editor',
+    connectedAt: now,
   });
+
+  // Clean awareness immediately when user navigates away or reloads
+  const handleBeforeUnload = () => {
+    try {
+      provider.setAwarenessField('user', null);
+      if (provider.awareness) {
+        provider.awareness.setLocalState(null);
+      }
+    } catch (_) {}
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
 
   const ytext = ydoc.getText('code');
   const ymeta = ydoc.getMap('meta');
@@ -200,6 +256,13 @@ export const setupHocuspocusCollab = ({
     ymeta,
     filesMap,
     destroy: () => {
+      try {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        provider.setAwarenessField('user', null);
+        if (provider.awareness) {
+          provider.awareness.setLocalState(null);
+        }
+      } catch (_) {}
       provider.destroy();
       ydoc.destroy();
     },

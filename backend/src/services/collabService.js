@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import { verifyAndConsumeTicket } from './ticketService.js';
 import { getRoom, updateRoomSnapshot } from './roomService.js';
 import { getLanguageById, getLanguageByFilename } from '../config/languages.js';
+import { handleTerminalUpgrade } from './terminalService.js';
 
 let hocuspocusInstance = null;
 let crosswsAdapter = null;
@@ -142,6 +143,13 @@ export const initCollabServer = (httpServer) => {
           socket.destroy();
           return;
         }
+      }
+
+      // Route terminal WebSocket requests to interactive PTY service
+      const { pathname } = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+      if (pathname.startsWith('/ws/terminal') || pathname === '/terminal') {
+        handleTerminalUpgrade(request, socket, head);
+        return;
       }
 
       crosswsAdapter.handleUpgrade(request, socket, head);

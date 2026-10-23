@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, HelpCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react';
+import { HelpCircle, LogOut, ChevronDown, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 export const Navbar = () => {
-  const { isDemoMode, currentUser, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -47,20 +47,6 @@ export const Navbar = () => {
 
         {/* Right Action Items */}
         <div className="navbar-actions">
-          {isDemoMode ? (
-            <div className="badge-demo" title="Demo Mode (Offline)">
-              <span className="pulse-dot-amber" />
-              <span className="badge-text-full">Demo Mode</span>
-              <span className="badge-text-compact">Demo</span>
-            </div>
-          ) : (
-            <div className="badge-live" title="Firebase Auth Live">
-              <ShieldCheck size={14} />
-              <span className="badge-text-full">Firebase Auth Live</span>
-              <span className="badge-text-compact">Live</span>
-            </div>
-          )}
-
           {/* Theme Switcher Toggle */}
           <button
             type="button"
