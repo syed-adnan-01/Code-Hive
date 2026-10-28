@@ -5,7 +5,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const getHeaders = (idToken) => {
   const headers = { 'Content-Type': 'application/json' };
   if (idToken) {
-    headers['Authorization'] = `Bearer ${idToken}`;
+    const cleanToken = idToken.startsWith('Bearer ') ? idToken : `Bearer ${idToken}`;
+    headers['Authorization'] = cleanToken;
   }
   return headers;
 };

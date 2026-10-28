@@ -29,6 +29,13 @@ import {
   sendSignalAPI,
   fetchSignalsAPI,
 } from '../../services/rtcService';
+import { getAuthTokenForRoom, getUidForRoom } from '../../services/collabService';
+
+const DEFAULT_STUN_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+];
 
 export const CallPanel = ({
   roomId,
@@ -49,37 +56,86 @@ export const CallPanel = ({
   const [participants, setParticipants] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [, setStreamVersion] = useState(0); // Forces re-render when tracks arrive
+  const [myParticipantUid, setMyParticipantUid] = useState(null);
 
   // WebRTC refs
   const localStreamRef = useRef(null);
   const screenStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const peerConnectionsRef = useRef(new Map()); // targetUid -> RTCPeerConnection
-  const remoteVideosRef = useRef(new Map()); // targetUid -> HTMLVideoElement / MediaStream
-  const iceServersRef = useRef([{ urls: 'stun:stun.l.google.com:19302' }]);
+  const remoteVideosRef = useRef(new Map()); // targetUid -> MediaStream
+  const pendingCandidatesRef = useRef(new Map()); // targetUid -> Array<candidate>
+  const iceServersRef = useRef(DEFAULT_STUN_SERVERS);
   const signalPollingTimerRef = useRef(null);
   const statusPollingTimerRef = useRef(null);
+
+  // Helper to resolve a valid auth token
+  const getToken = useCallback(async () => {
+    if (idToken) {
+      return idToken.startsWith('Bearer ') ? idToken.replace(/^Bearer /, '') : idToken;
+    }
+    const tok = await getAuthTokenForRoom(roomId, currentUser);
+    return tok ? (tok.startsWith('Bearer ') ? tok.replace(/^Bearer /, '') : tok) : '';
+  }, [idToken, roomId, currentUser]);
+
+  // Helper to reliably check if a participant UID is the local user
+  const isSelf = useCallback(
+    (uid) => {
+      if (!uid) return false;
+      return (
+        uid === myParticipantUid ||
+        uid === currentUser?.uid ||
+        uid === getUidForRoom(roomId, currentUser)
+      );
+    },
+    [myParticipantUid, currentUser, roomId]
+  );
+
+  // Helper to apply any pending ICE candidates received before remoteDescription was set
+  const applyPendingCandidates = async (peerUid, pc) => {
+    const pending = pendingCandidatesRef.current.get(peerUid) || [];
+    for (const cand of pending) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (err) {
+        console.warn('[WebRTC] Error applying queued ICE candidate:', err);
+      }
+    }
+    pendingCandidatesRef.current.delete(peerUid);
+  };
+
+  // Helper to parse SDP payload safely across browser formats
+  const parseSdpPayload = (payload, fallbackType) => {
+    if (!payload) return null;
+    if (payload.sdp && payload.sdp.type) return payload.sdp;
+    if (payload.type && payload.sdp) return payload;
+    const sdpStr = typeof payload.sdp === 'string' ? payload.sdp : typeof payload === 'string' ? payload : '';
+    return sdpStr ? { type: fallbackType, sdp: sdpStr } : null;
+  };
 
   // Fetch initial call status on mount or room change
   const refreshCallStatus = useCallback(async () => {
     if (!roomId) return;
     try {
-      const data = await getCallStatusAPI(roomId, idToken);
+      const tok = await getToken();
+      const data = await getCallStatusAPI(roomId, tok);
       if (data && data.participants) {
         setParticipants(data.participants);
       }
     } catch (err) {
       // Ignored if offline
     }
-  }, [idToken, roomId]);
+  }, [getToken, roomId]);
 
   useEffect(() => {
+    if (!isOpen || !roomId) return;
     refreshCallStatus();
-    statusPollingTimerRef.current = setInterval(refreshCallStatus, 5000);
+    statusPollingTimerRef.current = setInterval(refreshCallStatus, 4000);
     return () => {
       if (statusPollingTimerRef.current) clearInterval(statusPollingTimerRef.current);
     };
-  }, [refreshCallStatus]);
+  }, [isOpen, refreshCallStatus, roomId]);
 
   // Clean up WebRTC peer connections and local media tracks
   const cleanupCall = useCallback(() => {
@@ -100,6 +156,7 @@ export const CallPanel = ({
     });
     peerConnectionsRef.current.clear();
     remoteVideosRef.current.clear();
+    pendingCandidatesRef.current.clear();
 
     // 3. Clear signalling polling timer
     if (signalPollingTimerRef.current) {
@@ -110,105 +167,154 @@ export const CallPanel = ({
     setIsInCall(false);
     setIsJoining(false);
     setIsScreenSharing(false);
+    setMyParticipantUid(null);
   }, []);
 
   // 1. Initialize or obtain RTCPeerConnection for a specific remote peer
-  const getOrCreatePeerConnection = useCallback((targetUid) => {
-    if (peerConnectionsRef.current.has(targetUid)) {
-      return peerConnectionsRef.current.get(targetUid);
-    }
+  const getOrCreatePeerConnection = useCallback(
+    (targetUid) => {
+      if (peerConnectionsRef.current.has(targetUid)) {
+        return peerConnectionsRef.current.get(targetUid);
+      }
 
-    const pc = new RTCPeerConnection({
-      iceServers: iceServersRef.current,
-    });
-
-    // Add local media tracks to peer connection
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => {
-        pc.addTrack(track, localStreamRef.current);
+      const pc = new RTCPeerConnection({
+        iceServers: iceServersRef.current,
       });
-    }
 
-    // Handle ICE candidates generated by browser
-    pc.onicecandidate = (event) => {
-      if (event.candidate && roomId) {
-        sendSignalAPI({
-          roomId,
-          targetUid,
-          type: 'candidate',
-          payload: { candidate: event.candidate },
-          idToken,
-        }).catch(() => {});
+      // Add local media tracks to peer connection
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => {
+          pc.addTrack(track, localStreamRef.current);
+        });
       }
-    };
 
-    // Handle incoming remote media track
-    pc.ontrack = (event) => {
-      const [remoteStream] = event.streams;
-      if (remoteStream) {
-        remoteVideosRef.current.set(targetUid, remoteStream);
-        setParticipants((prev) => [...prev]); // Trigger re-render
-      }
-    };
+      // Handle ICE candidates generated by browser
+      pc.onicecandidate = async (event) => {
+        if (event.candidate && roomId) {
+          try {
+            const tok = await getToken();
+            await sendSignalAPI({
+              roomId,
+              targetUid,
+              type: 'candidate',
+              payload: { candidate: event.candidate },
+              idToken: tok,
+            });
+          } catch (e) {
+            // Non-fatal if candidate transmission fails momentarily
+          }
+        }
+      };
 
-    peerConnectionsRef.current.set(targetUid, pc);
-    return pc;
-  }, [idToken, roomId]);
+      // Handle incoming remote media tracks (Audio & Video)
+      pc.ontrack = (event) => {
+        let stream = event.streams && event.streams[0];
+        if (!stream) {
+          if (!remoteVideosRef.current.has(targetUid)) {
+            remoteVideosRef.current.set(targetUid, new MediaStream());
+          }
+          stream = remoteVideosRef.current.get(targetUid);
+          stream.addTrack(event.track);
+        } else {
+          remoteVideosRef.current.set(targetUid, stream);
+        }
+        setStreamVersion((v) => v + 1); // Trigger re-render to attach audio/video elements
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'failed') {
+          console.warn(`[WebRTC] Connection failed with peer ${targetUid}, restarting ICE.`);
+          pc.restartIce?.();
+        }
+      };
+
+      peerConnectionsRef.current.set(targetUid, pc);
+      return pc;
+    },
+    [getToken, roomId]
+  );
 
   // 2. Process incoming WebRTC signals (Offers, Answers, ICE candidates)
   const processIncomingSignals = useCallback(async () => {
     if (!roomId || !isInCall) return;
 
     try {
-      const signals = await fetchSignalsAPI({ roomId, idToken });
+      const tok = await getToken();
+      const signals = await fetchSignalsAPI({ roomId, idToken: tok });
+      if (!signals || signals.length === 0) return;
+
       for (const sig of signals) {
         const { senderUid, type, payload } = sig;
-        if (!senderUid || !payload) continue;
+        if (!senderUid || !payload || isSelf(senderUid)) continue;
 
         const pc = getOrCreatePeerConnection(senderUid);
 
         if (type === 'offer') {
-          // Received SDP Offer: set remote desc and send SDP Answer
-          await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp || payload));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
+          // Received SDP Offer: set remote desc, apply queued ICE, and send SDP Answer
+          const sdpDesc = parseSdpPayload(payload, 'offer');
+          if (sdpDesc) {
+            if (pc.signalingState !== 'stable') {
+              await Promise.all([
+                pc.setLocalDescription({ type: 'rollback' }).catch(() => {}),
+                pc.setRemoteDescription(new RTCSessionDescription(sdpDesc)),
+              ]);
+            } else {
+              await pc.setRemoteDescription(new RTCSessionDescription(sdpDesc));
+            }
 
-          await sendSignalAPI({
-            roomId,
-            targetUid: senderUid,
-            type: 'answer',
-            payload: { sdp: pc.localDescription },
-            idToken,
-          });
+            await applyPendingCandidates(senderUid, pc);
+
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await sendSignalAPI({
+              roomId,
+              targetUid: senderUid,
+              type: 'answer',
+              payload: { sdp: pc.localDescription },
+              idToken: tok,
+            });
+          }
         } else if (type === 'answer') {
           // Received SDP Answer
-          if (pc.signalingState !== 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp || payload));
+          const sdpDesc = parseSdpPayload(payload, 'answer');
+          if (sdpDesc && pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(sdpDesc));
+            await applyPendingCandidates(senderUid, pc);
           }
         } else if (type === 'candidate' && payload.candidate) {
           // Received ICE Candidate
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-          } catch (e) {
-            console.warn('Error adding ICE candidate:', e.message);
+          if (!pc.remoteDescription) {
+            // Queue until remoteDescription is set to prevent InvalidStateError
+            if (!pendingCandidatesRef.current.has(senderUid)) {
+              pendingCandidatesRef.current.set(senderUid, []);
+            }
+            pendingCandidatesRef.current.get(senderUid).push(payload.candidate);
+          } else {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (e) {
+              console.warn('[WebRTC] Error adding ICE candidate:', e.message);
+            }
           }
         } else if (type === 'call-ended') {
           pc.close();
           peerConnectionsRef.current.delete(senderUid);
           remoteVideosRef.current.delete(senderUid);
+          pendingCandidatesRef.current.delete(senderUid);
           setParticipants((prev) => prev.filter((p) => p.uid !== senderUid));
         }
       }
     } catch (err) {
-      // Ignored during network switch
+      // Non-fatal during rapid polling
     }
-  }, [getOrCreatePeerConnection, idToken, isInCall, roomId]);
+  }, [getOrCreatePeerConnection, getToken, isInCall, isSelf, roomId]);
 
-  // Poll for incoming signals while in call
+  // Fast polling for incoming signals while in call (every 800ms for swift negotiation)
   useEffect(() => {
     if (isInCall && roomId) {
       processIncomingSignals();
-      signalPollingTimerRef.current = setInterval(processIncomingSignals, 1500);
+      signalPollingTimerRef.current = setInterval(processIncomingSignals, 800);
     } else {
       if (signalPollingTimerRef.current) {
         clearInterval(signalPollingTimerRef.current);
@@ -221,38 +327,51 @@ export const CallPanel = ({
   }, [isInCall, processIncomingSignals, roomId]);
 
   // 3. Initiate call connection to peers
-  const initiateConnectionsToPeers = useCallback(async (activePeers) => {
-    for (const peer of activePeers) {
-      if (peer.uid === currentUser?.uid) continue;
-      const pc = getOrCreatePeerConnection(peer.uid);
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+  const initiateConnectionsToPeers = useCallback(
+    async (activePeers) => {
+      const tok = await getToken();
+      for (const peer of activePeers) {
+        if (isSelf(peer.uid)) continue;
+        const pc = getOrCreatePeerConnection(peer.uid);
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
 
-        await sendSignalAPI({
-          roomId,
-          targetUid: peer.uid,
-          type: 'offer',
-          payload: { sdp: pc.localDescription },
-          idToken,
-        });
-      } catch (err) {
-        console.warn(`Failed to create offer for peer ${peer.uid}:`, err.message);
+          await sendSignalAPI({
+            roomId,
+            targetUid: peer.uid,
+            type: 'offer',
+            payload: { sdp: pc.localDescription },
+            idToken: tok,
+          });
+        } catch (err) {
+          console.warn(`[WebRTC] Failed to create offer for peer ${peer.uid}:`, err.message);
+        }
       }
-    }
-  }, [currentUser?.uid, getOrCreatePeerConnection, idToken, roomId]);
+    },
+    [getOrCreatePeerConnection, getToken, isSelf, roomId]
+  );
 
   // 4. Handle Joining the Call
   const handleJoinCall = async () => {
-    if (!roomId) return;
+    if (!roomId) {
+      setErrorMessage('Please join or create a collaboration room first.');
+      return;
+    }
     setIsJoining(true);
     setErrorMessage('');
 
     try {
-      // Fetch ICE configuration
-      const iceServers = await fetchIceServersAPI(idToken);
-      if (iceServers && iceServers.length > 0) {
-        iceServersRef.current = iceServers;
+      const tok = await getToken();
+
+      // Fetch ICE configuration with fallback
+      try {
+        const iceServers = await fetchIceServersAPI(tok);
+        if (iceServers && iceServers.length > 0) {
+          iceServersRef.current = iceServers;
+        }
+      } catch (iceErr) {
+        iceServersRef.current = DEFAULT_STUN_SERVERS;
       }
 
       // Request media stream (Audio by default, Camera optional)
@@ -264,17 +383,22 @@ export const CallPanel = ({
         });
       } catch (mediaErr) {
         console.warn('Camera/Mic permission warning, falling back to audio only or mock:', mediaErr);
-        // Fallback to audio-only if camera request failed
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           setIsVideoEnabled(false);
         } catch (audioErr) {
-          // If in an automated or headless environment without mic, create a dummy silent stream
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = audioCtx.createOscillator();
-          const dst = osc.connect(audioCtx.createMediaStreamDestination());
-          osc.start();
-          stream = dst.stream;
+          // Headless / permission-denied environment fallback: generate silent audio stream
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            const audioCtx = new AudioContextClass();
+            const osc = audioCtx.createOscillator();
+            const dst = audioCtx.createMediaStreamDestination();
+            osc.connect(dst);
+            osc.start();
+            stream = dst.stream;
+          } else {
+            stream = new MediaStream();
+          }
         }
       }
 
@@ -288,8 +412,12 @@ export const CallPanel = ({
         roomId,
         audio: !isAudioMuted,
         video: isVideoEnabled,
-        idToken,
+        idToken: tok,
       });
+
+      if (res.participant?.uid) {
+        setMyParticipantUid(res.participant.uid);
+      }
 
       setIsInCall(true);
       setParticipants(res.participants || []);
@@ -308,7 +436,18 @@ export const CallPanel = ({
   const handleLeaveCall = async () => {
     if (!roomId) return;
     try {
-      await leaveCallAPI({ roomId, idToken });
+      const tok = await getToken();
+      // Notify all connected peers that we are disconnecting
+      for (const peerUid of peerConnectionsRef.current.keys()) {
+        sendSignalAPI({
+          roomId,
+          targetUid: peerUid,
+          type: 'call-ended',
+          payload: { reason: 'Peer left the call' },
+          idToken: tok,
+        }).catch(() => {});
+      }
+      await leaveCallAPI({ roomId, idToken: tok });
     } catch (err) {
       console.warn('Error during leave call API:', err.message);
     } finally {
@@ -329,16 +468,17 @@ export const CallPanel = ({
     }
 
     if (isInCall && roomId) {
+      const tok = await getToken();
       await updateMediaStateAPI({
         roomId,
         audio: !nextMuted,
         video: isVideoEnabled,
-        idToken,
+        idToken: tok,
       }).catch(() => {});
     }
   };
 
-  // 7. Toggle Camera
+  // 7. Toggle Camera with proper Renegotiation
   const handleToggleVideo = async () => {
     const nextVideo = !isVideoEnabled;
     setIsVideoEnabled(nextVideo);
@@ -362,28 +502,45 @@ export const CallPanel = ({
             localVideoRef.current.srcObject = localStreamRef.current;
           }
 
-          // Add to all active peer connections
-          peerConnectionsRef.current.forEach((pc) => {
-            pc.addTrack(newVideoTrack, localStreamRef.current);
-          });
+          // Add track to all active peer connections AND trigger renegotiation
+          const tok = await getToken();
+          for (const [peerUid, pc] of peerConnectionsRef.current.entries()) {
+            try {
+              pc.addTrack(newVideoTrack, localStreamRef.current);
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+
+              await sendSignalAPI({
+                roomId,
+                targetUid: peerUid,
+                type: 'offer',
+                payload: { sdp: pc.localDescription },
+                idToken: tok,
+              });
+            } catch (renegErr) {
+              console.warn(`[WebRTC] Renegotiation offer failed for peer ${peerUid}:`, renegErr.message);
+            }
+          }
         } catch (err) {
           console.warn('Could not turn on camera:', err.message);
           setIsVideoEnabled(false);
+          setErrorMessage('Camera access was denied or is unavailable.');
         }
       }
     }
 
     if (isInCall && roomId) {
+      const tok = await getToken();
       await updateMediaStateAPI({
         roomId,
         audio: !isAudioMuted,
         video: nextVideo,
-        idToken,
+        idToken: tok,
       }).catch(() => {});
     }
   };
 
-  // 8. Toggle Screen Sharing
+  // 8. Toggle Screen Sharing with Renegotiation
   const handleToggleScreenShare = async () => {
     if (isScreenSharing) {
       if (screenStreamRef.current) {
@@ -402,10 +559,24 @@ export const CallPanel = ({
           setIsScreenSharing(false);
         };
 
-        // Replace or add track in peer connections
-        peerConnectionsRef.current.forEach((pc) => {
-          pc.addTrack(screenTrack, stream);
-        });
+        // Add track to peer connections and renegotiate
+        const tok = await getToken();
+        for (const [peerUid, pc] of peerConnectionsRef.current.entries()) {
+          try {
+            pc.addTrack(screenTrack, stream);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await sendSignalAPI({
+              roomId,
+              targetUid: peerUid,
+              type: 'offer',
+              payload: { sdp: pc.localDescription },
+              idToken: tok,
+            });
+          } catch (err) {
+            console.warn(`Screen share renegotiation failed for peer ${peerUid}:`, err.message);
+          }
+        }
       } catch (err) {
         console.warn('Screen share cancelled or failed:', err.message);
       }
@@ -420,6 +591,8 @@ export const CallPanel = ({
   }, [cleanupCall]);
 
   if (!isOpen) return null;
+
+  const remotePeers = participants.filter((p) => !isSelf(p.uid));
 
   return (
     <div className={`codehive-call-container ${isMinimized ? 'minimized' : ''} ${isDark ? 'dark' : 'light'}`}>
@@ -478,7 +651,12 @@ export const CallPanel = ({
             <div className={`call-tile local-tile ${isInCall ? 'active' : 'idle'}`}>
               {isVideoEnabled && localStreamRef.current?.getVideoTracks()?.length > 0 ? (
                 <video
-                  ref={localVideoRef}
+                  ref={(el) => {
+                    localVideoRef.current = el;
+                    if (el && localStreamRef.current && el.srcObject !== localStreamRef.current) {
+                      el.srcObject = localStreamRef.current;
+                    }
+                  }}
                   autoPlay
                   playsInline
                   muted
@@ -510,57 +688,67 @@ export const CallPanel = ({
             </div>
 
             {/* Remote Peer Tiles */}
-            {participants
-              .filter((p) => p.uid !== currentUser?.uid)
-              .map((peer) => {
-                const remoteStream = remoteVideosRef.current.get(peer.uid);
-                const hasVideo = peer.video && remoteStream?.getVideoTracks()?.length > 0;
+            {remotePeers.map((peer) => {
+              const remoteStream = remoteVideosRef.current.get(peer.uid);
+              const hasVideo = peer.video && remoteStream?.getVideoTracks()?.length > 0;
 
-                return (
-                  <div key={peer.uid} className="call-tile remote-tile active">
-                    {hasVideo ? (
-                      <video
-                        autoPlay
-                        playsInline
-                        ref={(el) => {
-                          if (el && remoteStream && el.srcObject !== remoteStream) {
-                            el.srcObject = remoteStream;
-                          }
-                        }}
-                        className="tile-video"
-                      />
-                    ) : (
-                      <div className="tile-avatar-view">
-                        <div className={`tile-avatar ${peer.audio ? 'speaking-pulse' : ''}`}>
-                          {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
-                        </div>
-                      </div>
-                    )}
+              return (
+                <div key={peer.uid} className="call-tile remote-tile active">
+                  {/* Dedicated Audio Element ensures incoming speech is ALWAYS audible */}
+                  <audio
+                    autoPlay
+                    playsInline
+                    ref={(el) => {
+                      if (el && remoteStream && el.srcObject !== remoteStream) {
+                        el.srcObject = remoteStream;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                  />
 
-                    <div className="tile-footer font-code">
-                      <span className="tile-name">{peer.name || 'Peer'}</span>
-                      <div className="tile-indicators">
-                        {peer.audio ? (
-                          <Mic size={13} className="text-emerald" />
-                        ) : (
-                          <MicOff size={13} className="text-red" />
-                        )}
-                        {peer.video ? (
-                          <Video size={13} className="text-emerald" />
-                        ) : (
-                          <VideoOff size={13} className="text-slate" />
-                        )}
+                  {hasVideo ? (
+                    <video
+                      autoPlay
+                      playsInline
+                      ref={(el) => {
+                        if (el && remoteStream && el.srcObject !== remoteStream) {
+                          el.srcObject = remoteStream;
+                        }
+                      }}
+                      className="tile-video"
+                    />
+                  ) : (
+                    <div className="tile-avatar-view">
+                      <div className={`tile-avatar ${peer.audio ? 'speaking-pulse' : ''}`}>
+                        {peer.name ? peer.name.slice(0, 2).toUpperCase() : 'PE'}
                       </div>
                     </div>
+                  )}
+
+                  <div className="tile-footer font-code">
+                    <span className="tile-name">{peer.name || 'Peer'}</span>
+                    <div className="tile-indicators">
+                      {peer.audio ? (
+                        <Mic size={13} className="text-emerald" />
+                      ) : (
+                        <MicOff size={13} className="text-red" />
+                      )}
+                      {peer.video ? (
+                        <Video size={13} className="text-emerald" />
+                      ) : (
+                        <VideoOff size={13} className="text-slate" />
+                      )}
+                    </div>
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
 
             {/* Empty Participant Placeholders to visualize mesh limit of 4 */}
-            {Array.from({ length: Math.max(0, 4 - Math.max(1, participants.length)) }).map((_, i) => (
+            {Array.from({ length: Math.max(0, 4 - Math.max(1, remotePeers.length + 1)) }).map((_, i) => (
               <div key={`empty-${i}`} className="call-tile empty-tile font-code">
                 <Users size={20} className="text-slate opacity-40" />
-                <span>Slot {participants.length + i + 1} Open</span>
+                <span>Slot {remotePeers.length + i + 2} Open</span>
               </div>
             ))}
           </div>
